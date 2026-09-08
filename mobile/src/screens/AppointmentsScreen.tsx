@@ -49,7 +49,8 @@ export const AppointmentsScreen: React.FC = () => {
       if (Array.isArray(docs) && docs.length > 0) {
         setSelectedDoctorId(docs[0]._id);
       }
-    } catch (e) {
+    } catch (e: any) {
+      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Failed to load appointments:');
       console.warn('Failed to load appointments:', e);
     } finally {
       setIsLoading(false);
@@ -70,7 +71,8 @@ export const AppointmentsScreen: React.FC = () => {
     try {
       const results = await appointmentsApi.search(text.trim());
       setAppointments(Array.isArray(results) ? results : []);
-    } catch (e) {
+    } catch (e: any) {
+      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Search failed:');
       console.warn('Search failed:', e);
     }
   };
@@ -82,8 +84,8 @@ export const AppointmentsScreen: React.FC = () => {
         prev.map((a) => (a._id === id ? { ...a, status: newStatus as any } : a))
       );
       Alert.alert('Status Updated', `Appointment marked as ${newStatus}`);
-    } catch (e) {
-      Alert.alert('Error', 'Could not update status');
+    } catch (e: any) {
+      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Could not update status');
     }
   };
 
@@ -97,8 +99,8 @@ export const AppointmentsScreen: React.FC = () => {
           try {
             await appointmentsApi.delete(id);
             setAppointments((prev) => prev.filter((a) => a._id !== id));
-          } catch (e) {
-            Alert.alert('Error', 'Failed to delete appointment');
+          } catch (e: any) {
+            Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Failed to delete appointment');
           }
         },
       },
@@ -153,8 +155,8 @@ export const AppointmentsScreen: React.FC = () => {
       );
       setRescheduleModalAppt(null);
       Alert.alert('Success', 'Appointment rescheduled successfully');
-    } catch (e) {
-      Alert.alert('Error', 'Failed to reschedule appointment');
+    } catch (e: any) {
+      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Failed to reschedule appointment');
     }
   };
 

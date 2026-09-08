@@ -41,7 +41,9 @@ export const LoginScreen: React.FC = () => {
         err.response?.data?.message ||
         err.message ||
         'Failed to connect to server. Check your backend URL.';
+      console.log('Login error:', err);
       setErrorMessage(msg);
+      Alert.alert('Login Error', msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -53,8 +55,8 @@ export const LoginScreen: React.FC = () => {
       await setCustomBackendUrl(apiUrlInput.trim());
       setShowConfig(false);
       Alert.alert('Success', 'Backend API URL updated successfully');
-    } catch (e) {
-      Alert.alert('Error', 'Failed to save backend URL');
+    } catch (e: any) {
+      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Failed to save backend URL');
     }
   };
 

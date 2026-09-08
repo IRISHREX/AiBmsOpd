@@ -42,7 +42,8 @@ export const DoctorsScreen: React.FC = () => {
       if (list.length > 0 && !selectedDocId) {
         setSelectedDocId(list[0]._id);
       }
-    } catch (e) {
+    } catch (e: any) {
+      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Failed to load doctors:');
       console.warn('Failed to load doctors:', e);
     } finally {
       setIsLoading(false);
@@ -59,7 +60,7 @@ export const DoctorsScreen: React.FC = () => {
     try {
       const res = await doctorsApi.getCapacity({ doctorId, date });
       setCapacityData(res);
-    } catch (e) {
+    } catch (e: any) {
       setCapacityData(null);
     } finally {
       setIsLoadingCapacity(false);

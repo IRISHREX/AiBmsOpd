@@ -30,7 +30,8 @@ export const InvoicesScreen: React.FC = () => {
       if (statsRes.status === 'fulfilled') {
         setStats(statsRes.value);
       }
-    } catch (e) {
+    } catch (e: any) {
+      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Failed to load invoices:');
       console.warn('Failed to load invoices:', e);
     } finally {
       setIsLoading(false);
@@ -58,8 +59,8 @@ export const InvoicesScreen: React.FC = () => {
               )
             );
             Alert.alert('Success', 'Invoice settled successfully!');
-          } catch (e) {
-            Alert.alert('Error', 'Failed to settle invoice');
+          } catch (e: any) {
+            Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Failed to settle invoice');
           }
         },
       },
@@ -76,8 +77,8 @@ export const InvoicesScreen: React.FC = () => {
           try {
             await invoicesApi.delete(id);
             setInvoices((prev) => prev.filter((i) => i._id !== id));
-          } catch (e) {
-            Alert.alert('Error', 'Failed to delete invoice');
+          } catch (e: any) {
+            Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Failed to delete invoice');
           }
         },
       },

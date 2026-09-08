@@ -61,24 +61,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async (email: string, password: string, role = 'Doctor') => {
-    setIsLoading(true);
-    try {
-      const response = await authApi.login({ email, password, role });
-      const loggedUser = response.user;
-      setUser(loggedUser);
-      await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(loggedUser));
-    } finally {
-      setIsLoading(false);
-    }
+    const response = await authApi.login({ email, password, role });
+    const loggedUser = response.user;
+    setUser(loggedUser);
+    await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(loggedUser));
   };
 
   const logout = async () => {
-    setIsLoading(true);
     try {
       await authApi.logout();
     } finally {
       setUser(null);
-      setIsLoading(false);
     }
   };
 
