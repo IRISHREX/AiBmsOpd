@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     bootstrapAsync();
   }, []);
 
-  const login = async (email: string, password: string, role = 'doctor') => {
+  const login = async (email: string, password: string, role = 'Doctor') => {
     setIsLoading(true);
     try {
       const response = await authApi.login({ email, password, role });

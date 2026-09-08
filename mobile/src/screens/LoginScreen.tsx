@@ -12,12 +12,13 @@ import {
   Alert,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { UserRole } from '../types';
 
 export const LoginScreen: React.FC = () => {
   const { login, backendUrl, setCustomBackendUrl } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'doctor' | 'admin' | 'compounder'>('doctor');
+  const [role, setRole] = useState<'Doctor' | 'Admin' | 'Compounder'>('Doctor');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -76,7 +77,7 @@ export const LoginScreen: React.FC = () => {
 
           {/* Role selector pills */}
           <View style={styles.roleContainer}>
-            {(['doctor', 'admin', 'compounder'] as const).map((r) => (
+            {(['Doctor', 'Admin', 'Compounder'] as const).map((r) => (
               <TouchableOpacity
                 key={r}
                 style={[styles.roleTab, role === r && styles.roleTabActive]}
@@ -85,7 +86,7 @@ export const LoginScreen: React.FC = () => {
                 <Text
                   style={[styles.roleTabText, role === r && styles.roleTabTextActive]}
                 >
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                  {r}
                 </Text>
               </TouchableOpacity>
             ))}
