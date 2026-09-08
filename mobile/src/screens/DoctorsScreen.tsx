@@ -43,7 +43,7 @@ export const DoctorsScreen: React.FC = () => {
         setSelectedDocId(list[0]._id);
       }
     } catch (e: any) {
-      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Failed to load doctors:');
+      Alert.alert('Error', e?.response?.data?.message || e?.message || 'Failed to load doctors:');
       console.warn('Failed to load doctors:', e);
     } finally {
       setIsLoading(false);

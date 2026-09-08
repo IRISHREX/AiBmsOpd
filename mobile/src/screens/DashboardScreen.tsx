@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-}   Alert,
+  Alert,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { appointmentsApi } from '../api/appointments';
@@ -35,7 +35,7 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
         setInvoiceStats(statsData.value);
       }
     } catch (e: any) {
-      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Dashboard load error:');
+      Alert.alert('Error', e?.response?.data?.message || e?.message || 'Dashboard load error:');
       console.warn('Dashboard load error:', e);
     } finally {
       setIsLoading(false);

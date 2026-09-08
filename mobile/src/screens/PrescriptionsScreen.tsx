@@ -33,7 +33,7 @@ export const PrescriptionsScreen: React.FC = () => {
       const res = await prescriptionsApi.getMedicines(1, 50);
       setMedicines(Array.isArray(res?.medicines) ? res.medicines : []);
     } catch (e: any) {
-      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Failed to load medicines:');
+      Alert.alert('Error', e?.response?.data?.message || e?.message || 'Failed to load medicines:');
       console.warn('Failed to load medicines:', e);
     } finally {
       setIsLoading(false);
@@ -59,7 +59,7 @@ export const PrescriptionsScreen: React.FC = () => {
         setMedicines(Array.isArray(results) ? results : []);
       }
     } catch (e: any) {
-      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Medicine search failed:');
+      Alert.alert('Error', e?.response?.data?.message || e?.message || 'Medicine search failed:');
       console.warn('Medicine search failed:', e);
     }
   };

@@ -56,7 +56,7 @@ export const LoginScreen: React.FC = () => {
       setShowConfig(false);
       Alert.alert('Success', 'Backend API URL updated successfully');
     } catch (e: any) {
-      Alert.alert('Error', e: any?.response?.data?.message || e: any?.message || 'Failed to save backend URL');
+      Alert.alert('Error', e?.response?.data?.message || e?.message || 'Failed to save backend URL');
     }
   };
 
