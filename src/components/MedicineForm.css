@@ -1,0 +1,125 @@
+/* Medicine Form Styles */
+.medicine-form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.form-group.full-width {
+  width: 100%;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.form-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.required {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+.helper-text {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #94a3b8;
+  margin-left: 4px;
+}
+
+.form-input {
+  padding: 10px 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.2s;
+  background: #fff;
+  color: #1e293b;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #271776;
+  box-shadow: 0 0 0 3px rgba(39, 23, 118, 0.1);
+}
+
+.form-input::placeholder {
+  color: #cbd5e1;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.btn-cancel,
+.btn-submit {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  min-width: 100px;
+}
+
+.btn-cancel {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.btn-submit {
+  background: #271776;
+  color: #fff;
+}
+
+.btn-submit:hover {
+  background: #1e1159;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(39, 23, 118, 0.3);
+}
+
+.btn-submit:active,
+.btn-cancel:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .btn-cancel,
+  .btn-submit {
+    width: 100%;
+  }
+}

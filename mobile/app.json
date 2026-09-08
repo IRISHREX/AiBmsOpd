@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "BMS-OPD Mobile",
+    "slug": "bms-opd-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#0ea5e9"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0ea5e9"
+      },
+      "package": "com.bms.opd"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

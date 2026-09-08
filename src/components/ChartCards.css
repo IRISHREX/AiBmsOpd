@@ -1,0 +1,28 @@
+.chart-card {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.chart-card h3 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.pie-chart-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.line-chart-container {
+  width: 100%;
+}
+
+.axis-label {
+  font-size: 0.75rem;
+  fill: #777;
+}

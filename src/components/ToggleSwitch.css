@@ -1,0 +1,65 @@
+/* Toggle container */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 3.75rem;      /* 60px */
+  height: 2.3rem;    /* 34px */
+}
+
+/* Hide default checkbox */
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Slider track */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+}
+
+/* Slider knob */
+.slider::before {
+  position: absolute;
+  content: "";
+  height: 1.625rem;   /* 26px */
+  width: 1.625rem;    /* 26px */
+  left: 0.25rem;      /* 4px */
+  bottom: 0.25rem;    /* 4px */
+  background-color: #fff;
+  transition: 0.4s;
+}
+
+/* Checked state */
+input:checked + .slider {
+  background-color: #2196f3;
+}
+
+/* Focus state */
+input:focus + .slider {
+  box-shadow: 0 0 0.0625rem #2196f3; /* 1px */
+}
+
+/* Move knob when checked */
+input:checked + .slider::before {
+  transform: translateX(1.625rem); /* 26px */
+}
+
+/* Rounded slider */
+.slider.round {
+  border-radius: 2.2rem; /* 34px */
+}
+
+.slider.round::before {
+  border-radius: 50%;
+}
+
+/* Label text */
+.label-text {
+  margin-left: 4.375rem; /* 70px */
+  white-space: nowrap;
+}

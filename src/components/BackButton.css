@@ -1,0 +1,105 @@
+.arrow-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fb7185, #1a1a1a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 24px rgba(251, 113, 133, 0.35);
+    border: none;
+    position: relative;
+    overflow: visible;
+}
+
+.arrow-btn::after {
+    content: "←";
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    z-index: 10;
+    position: relative;
+}
+
+.arrow-btn:hover {
+    transform: translateX(-3px) scale(1.08);
+    box-shadow: 0 12px 32px rgba(251, 113, 133, 0.5);
+}
+
+.arrow-btn:focus-visible {
+    outline: 2px solid #fb7185;
+    outline-offset: 2px;
+}
+
+/* Blast effect particles */
+.particle {
+    position: fixed;
+    pointer-events: none;
+    font-size: 24px;
+    animation: blast 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes blast {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--tx), var(--ty)) scale(0.3);
+    }
+}
+
+/* Ring burst effect */
+.burst-ring {
+    position: fixed;
+    border: 2px solid #fb7185;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: burst 0.6s ease-out forwards;
+}
+
+@keyframes burst {
+    0% {
+        width: 40px;
+        height: 40px;
+        opacity: 1;
+    }
+    100% {
+        width: 120px;
+        height: 120px;
+        opacity: 0;
+    }
+}
+
+/* Flash effect */
+.flash {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at var(--x), var(--y), rgba(251, 113, 133, 0.5) 0%, transparent 50%);
+    pointer-events: none;
+    animation: flashEffect 0.4s ease-out forwards;
+}
+
+@keyframes flashEffect {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .arrow-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .arrow-btn::after {
+        font-size: 18px;
+    }
+}

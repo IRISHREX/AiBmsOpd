@@ -1,0 +1,126 @@
+/* Settings Navigation Bar - Specific to General Settings */
+.settings-page .general-settings-nav-bar {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 35px;
+  padding: 20px;
+  background: var(--bg-card);
+  border-radius: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: 3px solid transparent;
+}
+
+.general-settings-nav-bar .general-nav-item {
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: 2px solid transparent;
+  background: transparent;
+  color: var(--text-main);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.general-settings-nav-bar .general-nav-item:hover {
+  background: rgba(11, 116, 255, 0.1);
+  border-color: #0b74ff;
+  color: #0b74ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(11, 116, 255, 0.2);
+}
+
+.general-settings-nav-bar .general-nav-item.active {
+  background: var(--btn-gradient);
+  border-color: #0b74ff;
+  color: white;
+  box-shadow: 0 4px 15px rgba(11, 116, 255, 0.4);
+  font-weight: 700;
+}
+
+/* Header Footer Section */
+.general-settings-header-footer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.general-settings-header-footer-section .header-footer-creator {
+  background: transparent;
+  padding: 0;
+}
+
+.general-settings-header-footer-section .creator-header {
+  margin-bottom: 25px;
+}
+
+.general-settings-header-footer-section .creator-header h2 {
+  font-size: 2rem;
+  color: var(--text-main);
+}
+
+.general-settings-header-footer-section .creator-header p {
+  color: var(--text-secondary);
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .general-settings-nav-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .general-settings-nav-bar .general-nav-item {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .general-settings-nav-bar {
+    gap: 10px;
+    padding: 15px;
+  }
+
+  .general-settings-nav-bar .general-nav-item {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .general-settings-nav-bar .general-nav-item.active {
+    min-width: auto;
+  }
+  .general-settings-header-footer-section .page{
+    margin-left: 0;
+    padding: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .general-settings-nav-bar {
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .general-settings-nav-bar .general-nav-item {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+    flex: 1;
+  }
+  .general-settings-header-footer-section .page {
+    padding-inline: 0;
+  }
+  .settings-page {
+    margin: 0;
+  }
+}

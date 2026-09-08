@@ -1,0 +1,211 @@
+.capacity-calendar-wrapper {
+  padding: 1.5rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Legend Styles */
+.capacity-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.legend-box {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.legend-box.green {
+  background: #4caf50;
+}
+
+.legend-box.yellow {
+  background: #ff9800;
+}
+
+.legend-box.red {
+  background: #f44336;
+}
+
+.legend-box.gray {
+  background: #e0e0e0;
+}
+
+/* Calendar Container */
+.capacity-calendar-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.capacity-calendar-container :global(.react-calendar) {
+  border: none;
+  font-family: inherit;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* Tile Styling */
+.capacity-calendar-container :global(.react-calendar__tile) {
+  padding: 0.75rem;
+  position: relative;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.capacity-calendar-container :global(.react-calendar__tile:hover:not(:disabled)) {
+  background: #f0f0f0;
+  transform: scale(1.05);
+}
+
+.capacity-calendar-container :global(.react-calendar__tile:disabled) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Capacity-specific tile classes */
+.capacity-calendar-container :global(.react-calendar__tile.has-capacity.capacity-green) {
+  background: #c8e6c9;
+  color: #1b5e20;
+  font-weight: 500;
+}
+
+.capacity-calendar-container :global(.react-calendar__tile.has-capacity.capacity-yellow) {
+  background: #ffe0b2;
+  color: #e65100;
+  font-weight: 500;
+}
+
+.capacity-calendar-container :global(.react-calendar__tile.has-capacity.capacity-red) {
+  background: #ffcdd2;
+  color: #b71c1c;
+  font-weight: 500;
+  cursor: not-allowed;
+}
+
+.capacity-calendar-container :global(.react-calendar__tile.has-capacity.capacity-red:hover) {
+  background: #ffcdd2;
+  cursor: not-allowed;
+}
+
+.capacity-calendar-container :global(.react-calendar__tile.no-capacity) {
+  background: #f5f5f5;
+  color: #999;
+}
+
+.capacity-calendar-container :global(.react-calendar__tile.selected-date) {
+  border: 3px solid #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.capacity-calendar-container :global(.react-calendar__tile.react-calendar__tile--active) {
+  background: #667eea;
+  color: white;
+}
+
+/* Loading State */
+.capacity-loading {
+  text-align: center;
+  padding: 2rem;
+  color: #999;
+  font-size: 0.95rem;
+}
+
+/* Capacity Info */
+.capacity-info {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-left: 4px solid #667eea;
+  border-radius: 4px;
+}
+
+.capacity-info h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #333;
+  font-size: 1rem;
+}
+
+.info-details {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.info-details p {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-badge.status-green {
+  background: #c8e6c9;
+  color: #1b5e20;
+}
+
+.status-badge.status-yellow {
+  background: #ffe0b2;
+  color: #e65100;
+}
+
+.status-badge.status-red {
+  background: #ffcdd2;
+  color: #b71c1c;
+}
+
+.no-capacity-info {
+  color: #999;
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .capacity-calendar-wrapper {
+    padding: 1rem;
+  }
+
+  .capacity-legend {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .capacity-calendar-container :global(.react-calendar__tile) {
+    min-height: 50px;
+    font-size: 0.75rem;
+  }
+
+  .capacity-info {
+    padding: 1rem;
+  }
+}

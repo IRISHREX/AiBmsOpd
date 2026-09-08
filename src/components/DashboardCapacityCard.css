@@ -1,0 +1,281 @@
+.dashboard-capacity-card {
+  background: white;
+  border-radius: 10px;
+  padding: 1.2rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e8e8e8;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.dashboard-capacity-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-color: #2196f3;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.card-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.card-refresh {
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+}
+
+.card-refresh:hover {
+  transform: rotate(180deg);
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+/* Today's Capacity */
+.today-capacity {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.2rem;
+  border-left: 4px solid #2196f3;
+}
+
+.today-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.today-info .label {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.today-info .slots {
+  font-weight: 700;
+  color: #2196f3;
+  font-size: 0.95rem;
+}
+
+.today-bar {
+  background: #e0e0e0;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #bdbdbd;
+}
+
+.today-bar .bar-fill {
+  height: 100%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  border-radius: 6px;
+}
+
+/* Upcoming Schedule */
+.upcoming-schedule {
+  margin-bottom: 0.5rem;
+}
+
+.upcoming-schedule h5 {
+  margin: 0 0 0.75rem 0;
+  color: #666;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+}
+
+.schedule-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 0.4rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.schedule-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.tile-date {
+  color: #666;
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-bottom: 0.2rem;
+}
+
+.tile-capacity {
+  color: #333;
+  font-weight: 600;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.tile-off {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: #ff6b6b;
+  color: white;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+/* Capacity Status Colors */
+.schedule-tile.capacity-green {
+  background: #c8e6c9;
+  color: #1b5e20;
+  border-color: #66bb6a;
+}
+
+.schedule-tile.capacity-green .tile-date {
+  color: #1b5e20;
+}
+
+.schedule-tile.capacity-yellow {
+  background: #ffe0b2;
+  color: #e65100;
+  border-color: #ffb74d;
+}
+
+.schedule-tile.capacity-yellow .tile-date {
+  color: #e65100;
+}
+
+.schedule-tile.capacity-red {
+  background: #ffcdd2;
+  color: #b71c1c;
+  border-color: #ef5350;
+}
+
+.schedule-tile.capacity-red .tile-date {
+  color: #b71c1c;
+}
+
+/* Non-working Day */
+.schedule-tile.non-working {
+  background: #f5f5f5;
+  color: #999;
+  border-color: #ddd;
+  opacity: 0.6;
+}
+
+.schedule-tile.non-working .tile-date {
+  color: #999;
+}
+
+.no-schedule {
+  text-align: center;
+  padding: 1.5rem;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .schedule-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-capacity-card {
+    padding: 1rem;
+  }
+
+  .card-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.8rem;
+  }
+
+  .card-header h4 {
+    font-size: 0.95rem;
+  }
+
+  .schedule-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.4rem;
+  }
+
+  .schedule-tile {
+    padding: 0.5rem 0.3rem;
+    font-size: 0.7rem;
+  }
+
+  .tile-date {
+    font-size: 0.75rem;
+  }
+
+  .tile-capacity {
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-capacity-card {
+    padding: 0.8rem;
+  }
+
+  .card-header h4 {
+    font-size: 0.9rem;
+  }
+
+  .schedule-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.3rem;
+  }
+
+  .schedule-tile {
+    padding: 0.4rem 0.2rem;
+    font-size: 0.65rem;
+  }
+
+  .tile-date {
+    font-size: 0.7rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .tile-capacity {
+    font-size: 0.6rem;
+  }
+
+  .tile-off {
+    font-size: 0.5rem;
+    padding: 0.1rem 0.3rem;
+  }
+}

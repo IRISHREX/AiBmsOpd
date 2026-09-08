@@ -1,0 +1,411 @@
+.slot-checker-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.slot-checker-popup {
+  width: 550px;
+  max-width: 90vw;
+  height: auto;
+  max-height: 85vh;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+/* Header */
+.slot-checker-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem;
+  background: linear-gradient(135deg, #0859af 0%, #0d7bb5 100%);
+  color: white;
+  border-bottom: none;
+}
+
+.slot-checker-popup-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.popup-close-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.popup-close-btn:hover {
+  transform: scale(1.2) rotate(90deg);
+  opacity: 0.9;
+}
+
+.popup-close-btn.btn-icon {
+  color: #fff;
+}
+
+
+/* Doctor Selector */
+.popup-doctor-selector {
+  padding: 1rem 1.2rem;
+  background: #f9f9f9;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.popup-doctor-selector.popup-fixed-doctor {
+  padding: 0.8rem 1.2rem;
+}
+
+.popup-fixed-doctor-name {
+  font-weight: 600;
+  color: #0859af;
+  font-size: 0.98rem;
+  text-align: center;
+  padding: 0.6rem;
+  background: linear-gradient(135deg, #f0f5ff 0%, #e8f1ff 100%);
+  border-radius: 6px;
+  border-left: 4px solid #0859af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.8rem;
+}
+
+.popup-doctor-select {
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  background-color: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.popup-doctor-select:hover {
+  border-color: #0859af;
+  box-shadow: 0 0 0 3px rgba(8, 89, 175, 0.1);
+}
+
+.popup-doctor-select:focus {
+  outline: none;
+  border-color: #0859af;
+  box-shadow: 0 0 0 3px rgba(8, 89, 175, 0.2);
+}
+
+/* Content */
+.slot-checker-popup-content {
+  display: grid;
+  grid-template-columns: 1fr 0.95fr;
+  gap: 1.2rem;
+  padding: 1.2rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Calendar Wrapper */
+.popup-calendar-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.popup-doctor-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+  text-align: center;
+  padding: 0.6rem;
+  background: #f5f5f5;
+  border-radius: 6px;
+  border-left: 4px solid #0859af;
+}
+
+.popup-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+/* Calendar Styling */
+.popup-calendar {
+  background-color: #fff !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 8px !important;
+  padding: 0.5rem !important;
+  font-size: 0.85rem !important;
+}
+
+.popup-calendar .react-calendar__tile {
+  padding: 0.4rem !important;
+  min-height: 48px !important;
+  position: relative;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+  font-size: 0.8rem;
+}
+
+.popup-calendar .react-calendar__tile:hover {
+  background-color: #f0f5ff;
+  border-color: #0859af;
+  transform: scale(0.98);
+}
+
+.popup-calendar .react-calendar__tile--active {
+  background-color: #0859af !important;
+  color: white !important;
+  border-color: #0859af !important;
+}
+
+.popup-calendar .tile-disabled {
+  background-color: #f5f5f5 !important;
+  color: #ccc !important;
+  cursor: not-allowed;
+}
+
+.popup-calendar .tile-green {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%) !important;
+  border-color: #4caf50 !important;
+}
+
+.popup-calendar .tile-yellow {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffe082 100%) !important;
+  border-color: #fbc02d !important;
+}
+
+.popup-calendar .tile-red {
+  background: linear-gradient(135deg, #ffebee 0%, #ef9a9a 100%) !important;
+  border-color: #f44336 !important;
+}
+
+.tile-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.slot-number {
+  font-size: 1rem;
+  color: #0859af;
+  font-weight: bold;
+}
+
+.tile-red .slot-number {
+  color: #d32f2f;
+}
+
+/* Legend */
+.popup-legend {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  padding: 0.8rem;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.popup-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.popup-legend-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1px solid #ddd;
+  flex-shrink: 0;
+}
+
+.popup-legend-dot.green {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-color: #4caf50;
+}
+
+.popup-legend-dot.yellow {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffe082 100%);
+  border-color: #fbc02d;
+}
+
+.popup-legend-dot.red {
+  background: linear-gradient(135deg, #ffebee 0%, #ef9a9a 100%);
+  border-color: #f44336;
+}
+
+/* Slot Details Panel */
+.popup-slot-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  height: fit-content;
+  max-height: 350px;
+  overflow-y: auto;
+  border-left: 4px solid #0859af;
+}
+
+.popup-detail-header {
+  font-weight: 700;
+  color: #0859af;
+  font-size: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 2px solid #0859af;
+  text-align: center;
+}
+
+.popup-details-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.popup-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem;
+  background-color: #fff;
+  border-radius: 6px;
+  border-left: 3px solid #0859af;
+  font-size: 0.9rem;
+}
+
+.popup-detail-item span:first-child {
+  color: #666;
+  font-weight: 500;
+}
+
+.popup-detail-item strong {
+  color: #333;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.popup-detail-item .text-green {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.popup-detail-item .text-red {
+  color: #f44336;
+  font-weight: bold;
+}
+
+.popup-no-work {
+  text-align: center;
+  padding: 1rem;
+  background-color: #fff;
+  border-radius: 6px;
+  color: #f44336;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  .slot-checker-popup {
+    width: 95vw;
+    max-height: 90vh;
+  }
+
+  .slot-checker-popup-content {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .popup-calendar .react-calendar__tile {
+    min-height: 44px !important;
+    padding: 0.3rem !important;
+  }
+
+  .popup-legend {
+    grid-template-columns: 1fr;
+  }
+
+  .popup-slot-details {
+    max-height: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .slot-checker-popup-header h3 {
+    font-size: 1rem;
+  }
+
+  .slot-checker-popup {
+    border-radius: 12px 12px 0 0;
+    max-height: 100vh;
+  }
+
+  .popup-calendar .react-calendar__tile {
+    min-height: 40px !important;
+    font-size: 0.7rem;
+  }
+
+  .slot-number {
+    font-size: 0.9rem;
+  }
+
+  .popup-detail-item {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  .popup-detail-header {
+    font-size: 0.95rem;
+  }
+}

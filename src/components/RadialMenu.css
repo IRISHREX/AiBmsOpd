@@ -1,0 +1,97 @@
+.radial-menu-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .radial-menu-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: #333;
+    padding: 0.1rem;
+    margin: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.063rem;
+    transform: rotate(90deg);
+    border-radius: 50%;
+  }
+  .radial-menu-button:hover {
+    background-color: #dae4f1
+  }
+  .radial-menu-button:focus {
+    outline: none;
+  }
+  
+  .radial-menu {
+    position: absolute;
+    width: 200px; 
+    height: 200px;
+    transform: translate(-50%, -50%) scale(0);
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    pointer-events: none;
+    z-index: 1102;
+  }
+  
+  .radial-menu.open {
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: auto;
+  }
+  
+  .radial-menu-items {
+    position: relative;
+    width: 108%;
+    height: 100%;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+.radial-menu-item {
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    background-color: #fff;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    transform: rotate(var(--angle)) translate(50px) rotate(calc(-1 * var(--angle)));
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55),
+      background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  }
+
+  .radial-menu-item:hover {
+    background-color: #f0f0f0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  .radial-menu:not(.open) .radial-menu-item {
+    transform: scale(0);
+  }
+
+  @media (max-width: 768px) {
+    .radial-menu {
+      width: 180px;
+      height: 180px;
+    }
+    .radial-menu-item {
+      transform: rotate(var(--angle)) translate(45px) rotate(calc(-1 * var(--angle)));
+    }
+  }
+
+  @media (max-width: 480px) {
+    .radial-menu {
+      width: 150px;
+      height: 150px;
+    }
+    .radial-menu-item {
+      transform: rotate(var(--angle)) translate(35px) rotate(calc(-1 * var(--angle)));
+    }
+  }

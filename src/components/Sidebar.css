@@ -1,0 +1,101 @@
+/* Sidebar.css - Styles for Sidebar component */
+
+.sidebar {
+  position: fixed;
+  width: 6.5rem;
+  background: var(--sidebar-bg, var(--bg-card));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  top: 0;
+  left: 0;
+  height: 100%;
+  align-items: center;
+  /* color: var(--text-main); */
+  color: var(--text-accent);
+  padding: 4.375rem 0;
+  transition: 0.3s;
+}
+.sidebar svg {
+  width: 3rem;
+  height: 3rem;
+  font-size: 2rem;
+  padding: 8px;
+}
+.sidebar svg:hover {
+  background: var(--bg-card);
+  color: var(--accent);
+  border-radius: 0.5rem;
+  transition: 0.3s;
+  cursor: pointer;
+}
+.sidebar .links {
+  display: flex;
+  flex-direction: column;
+  gap: 1.875rem;
+  height: 100%;
+  justify-content: space-between;
+}
+
+.wrapper {
+  padding: 5px;
+  width: 3.125rem;
+  overflow: hidden;
+  display: flex;
+  position: fixed;
+  top: 1.5rem; /*30px*/
+  left: 2rem; /*32px*/
+  font-size: 2.125rem; /*34px*/
+  background: transparent;
+  color: #fff;
+  height: 2.5rem; /*40px*/
+  width: 2.5rem; /*40px*/
+  border-radius: 0.5rem; /*8px*/
+  justify-content: center;
+  align-items: center;
+  z-index: 1101;
+}
+.wrapper .hamburger {
+  display: none;
+}
+.show {
+  left: 0;
+  transition: 0.3s;
+}
+
+@media (max-width: 485px) {
+  .sidebar {
+    width: 4rem;
+    background: #3939d9f2;
+    z-index: 1;
+  }
+  .wrapper {
+    left: 12px;
+    font-size: 1.5rem;
+    background-color: #3939d9f2;
+    z-index: 1;
+    width: 100%;
+    left: 0;
+    top: 0;
+    border-radius: 0;
+    justify-content: flex-start;
+    padding-inline: 15px;
+    padding-top: 12px;
+  }
+  .wrapper .hamburger {
+    display: block;
+    color: #fff;
+    background-color: transparent;
+  }
+
+.sidebar svg.icon-btn:hover {
+  background: #fff;
+  color: #4343db;
+}
+
+.sidebar svg.icon-btn {
+  background: transparent;
+  color: #fff;
+  border: 0;
+}
+}

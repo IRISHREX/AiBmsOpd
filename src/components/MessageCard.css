@@ -1,0 +1,16 @@
+.message-card .btn-link {
+  background: transparent;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.message-card .btn-link:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}

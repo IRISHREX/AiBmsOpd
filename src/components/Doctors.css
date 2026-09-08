@@ -1,0 +1,172 @@
+/* Doctors.css - Styles for Doctors component */
+
+.doctors h1 {
+  /* color: #3939d9f2; */
+  /* margin-bottom: 30px; */
+  color: #2a3686;
+  font-size: 2rem;
+}
+@media (max-width: 485px) {
+  .doctors h1 {
+    font-size: 1.375rem;
+    /* margin-bottom: 20px; */
+    text-align: center;
+  }
+}
+
+.doc-card {
+  background: #f7f7f7;
+  padding: 18px;
+  border-radius: 22px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  display: inline-block;
+}
+
+.doc-card__inner {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 2px solid #d9d9d9;
+  padding: 28px 26px 24px;
+}
+
+.doc-card__avatar {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  padding: 8px; /* ring width */
+  background: #bbccf0e9;
+  display: grid;
+  place-items: center;
+}
+.doc-card__avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #eee;
+}
+
+.doc-card__name {
+  margin: 8px 0 6px;
+  text-align: center;
+  font-size: 1.6rem;
+  line-height: 1.2;
+  color: var(--text);
+  font-weight: 700;
+}
+.doc-card__role {
+  margin: 0 0 14px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.doc-card__info {
+  margin: 10px 0 18px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.98rem;
+}
+.doc-card__info .label {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.doc-card__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.doc-btn {
+  padding: 12px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  border: 2px solid #215dd6;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: #215dd6;
+}
+
+.btn--primary {
+  /* background: #215DD6;
+  color: #fff; */
+  background: transparent;
+  color: #215dd6;
+}
+
+.doctors .banner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  grid-gap: 20px;
+  padding: 2.5rem 2.5rem;
+}
+.doctors .banner .card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.doctors .banner .card img {
+  width: 270px;
+  height: 270px;
+  border-radius: 100%;
+  margin-bottom: 20px;
+}
+.doctors .banner .card h4 {
+  font-size: 24px;
+  color: #333;
+  margin-bottom: 20px;
+}
+.doctors .banner .card div {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 20px;
+}
+.doctors .banner .card div p {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.doctors .banner .card div p span {
+  font-weight: 400;
+}
+
+@media (max-width: 350px) {
+  .doctors .banner {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100%, 1fr));
+    grid-gap: 20px;
+  }
+}
+
+.info-section {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+@media (max-width: 880px) {
+  .info-section {
+    flex-direction: column;
+  }
+}
+@media screen and (max-width: 767px) {
+  .doctors .banner {
+    grid-template-columns: 1fr;
+    padding-inline: 1rem;
+  }
+}
+.search-section {
+  display: flex;
+  gap: 0.5rem;
+}
