@@ -2,15 +2,39 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      window.global = window;
+      if (!window.process) {
+        window.process = { env: { NODE_ENV: 'development' } };
+      }
+    </script>
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>BMS-OPD</title>
-    <meta name="description" content="Hospital Outpatient Department (OPD) management dashboard for appointments, prescriptions, doctors, and patient medical records." />
+    <meta name="description" content="Cross-platform React Native mobile application for Hospital Outpatient Department (OPD) management." />
     <meta property="og:title" content="BMS-OPD" />
-    <meta property="og:description" content="Hospital Outpatient Department (OPD) management dashboard for appointments, prescriptions, doctors, and patient medical records." />
+    <meta property="og:description" content="Cross-platform React Native mobile application for Hospital Outpatient Department (OPD) management." />
+    <style>
+      html, body, #root {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background-color: #f1f5f9;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+      #root {
+        max-width: 480px;
+        margin: 0 auto;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.08);
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/index.web.tsx"></script>
   </body>
 </html>

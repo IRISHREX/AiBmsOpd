@@ -1,6 +1,6 @@
 {
   "name": "BMS-OPD",
-  "description": "Hospital Outpatient Department (OPD) management dashboard for appointments, prescriptions, doctors, and patient medical records.",
+  "description": "Cross-platform React Native mobile application for Hospital Outpatient Department (OPD) management.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

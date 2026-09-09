@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+.expo/
+.env
+*.apk
+*.aab
 
 # Editor directories and files
 .vscode/*
