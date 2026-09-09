@@ -1,11 +1,9 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Default to environment variable or fallback to production Render endpoint
+// Default to environment variable or fallback to localhost/deployed endpoint
 export const DEFAULT_API_BASE_URL =
-  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) ||
-  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_URL) ||
-  'https://bms-opd-be.onrender.com';
+  process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 export const AUTH_TOKEN_KEY = '@bms_opd_token';
 export const USER_DATA_KEY = '@bms_opd_user';
@@ -13,7 +11,6 @@ export const USER_DATA_KEY = '@bms_opd_user';
 export const apiClient: AxiosInstance = axios.create({
   baseURL: DEFAULT_API_BASE_URL,
   timeout: 15000,
-  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
