@@ -71,18 +71,20 @@ export interface PrescriptionItem {
 export interface Invoice {
   _id: string;
   invoiceNumber?: string;
-  appointmentId: string;
-  patientId?: string;
-  patientName: string;
-  doctorId?: string;
-  doctorName?: string;
-  totalAmount: number;
-  discountAmount?: number;
-  payableAmount: number;
-  paidAmount: number;
-  status: 'Unpaid' | 'Paid' | 'Partially Paid';
-  paymentMethod?: 'Cash' | 'Card' | 'UPI' | 'Bank Transfer';
-  createdAt: string;
+  appointment?: string;
+  patient?: any;
+  doctor?: any;
+  items?: { description: string; quantity: number; unitPrice: number; total: number }[];
+  tax?: number;
+  discount?: number;
+  totalAmount?: number;
+  payableAmount?: number;
+  paidAmount?: number;
+  payments?: { amount: number; method: string; date?: string; transactionId?: string }[];
+  status: 'Pending' | 'Paid' | 'Partially Paid' | 'Cancelled';
+  issuedAt?: string;
+  dueDate?: string;
+  createdAt?: string;
 }
 
 export interface Report {

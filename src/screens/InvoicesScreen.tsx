@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  TextInput,
 } from 'react-native';
 import { invoicesApi } from '../api/invoices';
 import { Invoice } from '../types';
@@ -16,6 +17,7 @@ import { LayoutAnimation } from 'react-native';
 export const InvoicesScreen: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [stats, setStats] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -45,6 +47,20 @@ export const InvoicesScreen: React.FC = () => {
     fetchInvoices();
   }, []);
 
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (!query.trim()) {
+      fetchInvoices();
+      return;
+    }
+    try {
+      const results = await invoicesApi.search(query);
+      setInvoices(results || []);
+    } catch (e) {
+      console.warn('Search failed', e);
+    }
+  };
+
   const handleSettle = async (invoiceId: string) => {
     Alert.alert('Settle Invoice', 'Mark this invoice as fully paid?', [
       { text: 'Cancel', style: 'cancel' },
@@ -52,7 +68,10 @@ export const InvoicesScreen: React.FC = () => {
         text: 'Mark as Paid',
         onPress: async () => {
           try {
-            await invoicesApi.settle(invoiceId, { paymentMethod: 'Cash' });
+            await invoicesApi.update(invoiceId, { 
+              status: 'Paid', 
+              payments: [{ amount: invoices.find(i => i._id === invoiceId)?.payableAmount || 0, method: 'Cash', date: new Date().toISOString() }]
+            });
             LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
             interactionUtils.playSuccess();
             interactionUtils.triggerNotification('Payment Received', 'Invoice has been marked as paid.');
@@ -117,6 +136,17 @@ export const InvoicesScreen: React.FC = () => {
         </View>
       </View>
 
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search invoices by patient or number..."
+          placeholderTextColor="#94a3b8"
+          value={searchQuery}
+          onChangeText={handleSearch}
+        />
+      </View>
+
       {/* Invoice List */}
       {isLoading ? (
         <ActivityIndicator size="large" color="#0284c7" style={{ marginTop: 40 }} />
@@ -143,7 +173,7 @@ export const InvoicesScreen: React.FC = () => {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View>
-                  <Text style={styles.patientName}>{item.patientName}</Text>
+                  <Text style={styles.patientName}>{item.patient?.name || 'Unknown'}</Text>
                   <Text style={styles.dateText}>
                     {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
                   </Text>
@@ -224,6 +254,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0f172a',
     marginTop: 2,
+  },
+  searchContainer: {
+    paddingHorizontal: 12,
+    marginBottom: 10,
+  },
+  searchInput: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#0f172a',
   },
   list: {
     paddingHorizontal: 12,
