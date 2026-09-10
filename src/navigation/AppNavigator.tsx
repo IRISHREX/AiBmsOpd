@@ -3,6 +3,7 @@ import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '../context/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
@@ -41,15 +42,15 @@ const MainTabs = () => {
           fontSize: 11,
           fontWeight: '600',
         },
-        tabBarIcon: ({ focused }) => {
-          let icon = '📋';
-          if (route.name === 'Dashboard') icon = '🏠';
-          if (route.name === 'Appointments') icon = '📅';
-          if (route.name === 'Doctors') icon = '🩺';
-          if (route.name === 'Prescriptions') icon = '💊';
-          if (route.name === 'Invoices') icon = '💳';
-          if (route.name === 'Menu') icon = '☰';
-          return <Text style={{ fontSize: 18 }}>{icon}</Text>;
+        tabBarIcon: ({ focused, color }) => {
+          let iconName: keyof typeof Ionicons.glyphMap = 'grid-outline';
+          if (route.name === 'Dashboard') iconName = focused ? 'home' : 'home-outline';
+          else if (route.name === 'Appointments') iconName = focused ? 'calendar' : 'calendar-outline';
+          else if (route.name === 'Doctors') iconName = focused ? 'medical' : 'medical-outline';
+          else if (route.name === 'Prescriptions') iconName = focused ? 'document-text' : 'document-text-outline';
+          else if (route.name === 'Invoices') iconName = focused ? 'card' : 'card-outline';
+          else if (route.name === 'Menu') iconName = focused ? 'menu' : 'menu-outline';
+          return <Ionicons name={iconName} size={22} color={color} />;
         },
       })}
     >

@@ -14,6 +14,8 @@ import {
   UIManager,
   RefreshControl,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -29,7 +31,33 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { DropdownPicker } from '../components/DropdownPicker';
 import { GENDERS, DEPARTMENTS } from '../utils/constants';
 
+/** Format an ISO date string or plain date string to DD/MM/YYYY */
+const formatDate = (dateStr?: string): string => {
+  if (!dateStr) return 'N/A';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return dateStr;
+  }
+};
+
+/** Derive doctor display name from appointment fields */
+const getDoctorName = (item: Appointment, doctors: Doctor[]): string => {
+  if (item.doctorName) return item.doctorName;
+  if (item.doctor?.firstName || item.doctor?.lastName)
+    return `${item.doctor.firstName || ''} ${item.doctor.lastName || ''}`.trim();
+  const matched = doctors.find(d => d._id === item.doctorId);
+  if (matched) return matched.name || `${matched.firstName || ''} ${matched.lastName || ''}`.trim();
+  return 'Assigned Physician';
+};
+
 export const AppointmentsScreen: React.FC = () => {
+  const navigation = useNavigation<any>();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -248,7 +276,7 @@ export const AppointmentsScreen: React.FC = () => {
       <View style={styles.topBar}>
         <TextInput
           style={styles.searchInput}
-          placeholder="🔍 Search patient, phone, token..."
+          placeholder="Search patient, phone, token..."
           placeholderTextColor="#94a3b8"
           value={searchQuery}
           onChangeText={handleSearch}
@@ -306,7 +334,8 @@ export const AppointmentsScreen: React.FC = () => {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.patientName}>{item.name || item.patientName}</Text>
                   <Text style={styles.contactInfo}>
-                    📞 {item.phone || item.patientPhone || 'N/A'}{' '}
+                    <Ionicons name="call-outline" size={12} color="#64748b" />{' '}
+                    {item.phone || item.patientPhone || 'N/A'}{' '}
                     {item.age || item.patientAge ? `• ${item.age || item.patientAge} yrs` : ''}
                   </Text>
                 </View>
@@ -325,16 +354,19 @@ export const AppointmentsScreen: React.FC = () => {
               </View>
 
               <View style={styles.infoRow}>
+                <Ionicons name="person-circle-outline" size={14} color="#64748b" style={{ marginRight: 4, marginTop: 1 }} />
                 <Text style={styles.detailLabel}>Doctor:</Text>
                 <Text style={styles.detailValue}>
-                  {item.doctorName || 'Assigned Physician'}
+                  {getDoctorName(item, doctors)}
                 </Text>
               </View>
 
               <View style={styles.infoRow}>
+                <Ionicons name="calendar-outline" size={14} color="#64748b" style={{ marginRight: 4, marginTop: 1 }} />
                 <Text style={styles.detailLabel}>Schedule:</Text>
                 <Text style={styles.detailValue}>
-                  📅 {item.appointmentDate} {item.slotTime ? `at ${item.slotTime}` : ''}
+                  {formatDate(item.appointmentDate || item.appointment_date)}
+                  {item.slotTime ? ` at ${item.slotTime}` : ''}
                 </Text>
               </View>
 
@@ -359,10 +391,21 @@ export const AppointmentsScreen: React.FC = () => {
                   />
                 </View>
                 <TouchableOpacity 
-                  style={{ padding: 12, borderRadius: 8, backgroundColor: item.prescriptionId ? (item.prescriptionComplete ? '#d1fae5' : '#fef08a') : '#fee2e2' }}
-                  onPress={() => handleStatusChange(item._id, 'Completed')}
+                  style={[
+                    styles.rxIconBtn,
+                    item.prescriptionId
+                      ? (item.prescriptionComplete ? styles.rxBtnComplete : styles.rxBtnSaved)
+                      : styles.rxBtnNew,
+                  ]}
+                  onPress={() => {
+                    navigation.navigate('Prescriptions', { appointmentId: item._id });
+                  }}
                 >
-                  <Text style={{ fontSize: 18 }}>💊</Text>
+                  <Ionicons
+                    name="medical-outline"
+                    size={20}
+                    color={item.prescriptionId ? (item.prescriptionComplete ? '#059669' : '#b45309') : '#dc2626'}
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -372,24 +415,27 @@ export const AppointmentsScreen: React.FC = () => {
                     style={[styles.cardBtn, styles.btnSuccess]}
                     onPress={() => handleStatusChange(item._id, 'Completed')}
                   >
-                    <Text style={styles.btnTextSuccess}>✓ Complete</Text>
+                    <Ionicons name="checkmark-circle-outline" size={14} color="#059669" />
+                    <Text style={styles.btnTextSuccess}> Complete</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
                   style={[styles.cardBtn, styles.btnSecondary]}
                   onPress={() => {
                     setRescheduleModalAppt(item);
-                    setRescheduleDate(item.appointmentDate || '');
+                    setRescheduleDate(item.appointmentDate || item.appointment_date?.split('T')[0] || '');
                     setRescheduleSlot(item.slotTime || '11:00 AM');
                   }}
                 >
-                  <Text style={styles.btnTextSecondary}>Reschedule</Text>
+                  <Ionicons name="time-outline" size={14} color="#475569" />
+                  <Text style={styles.btnTextSecondary}> Reschedule</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.cardBtn, styles.btnDanger]}
                   onPress={() => handleDelete(item._id)}
                 >
-                  <Text style={styles.btnTextDanger}>Delete</Text>
+                  <Ionicons name="trash-outline" size={14} color="#dc2626" />
+                  <Text style={styles.btnTextDanger}> Delete</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -807,6 +853,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rxIconBtn: {
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rxBtnNew: {
+    backgroundColor: '#fee2e2',
+  },
+  rxBtnSaved: {
+    backgroundColor: '#fef08a',
+  },
+  rxBtnComplete: {
+    backgroundColor: '#d1fae5',
   },
   btnSuccess: {
     backgroundColor: '#ecfdf5',

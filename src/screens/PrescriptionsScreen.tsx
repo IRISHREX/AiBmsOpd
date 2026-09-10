@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRoute } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -46,9 +47,10 @@ const getVitalWarning = (key: string, val: string): string | null => {
 };
 
 export const PrescriptionsScreen: React.FC = () => {
+  const route = useRoute<any>();
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [selectedApptId, setSelectedApptId] = useState('');
+  const [selectedApptId, setSelectedApptId] = useState(route?.params?.appointmentId || '');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState<'name' | 'composition'>('name');
   const [isLoading, setIsLoading] = useState(true);
@@ -173,6 +175,13 @@ export const PrescriptionsScreen: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // When navigated with an appointmentId param, pre-select it once data loads
+  useEffect(() => {
+    if (route?.params?.appointmentId && appointments.length > 0) {
+      setSelectedApptId(route.params.appointmentId);
+    }
+  }, [route?.params?.appointmentId, appointments]);
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
