@@ -22,7 +22,7 @@ export interface CreateAppointmentPayload {
   slotTime?: string;
   hasVisited?: boolean;
   price?: number;
-  paymentStatus?: string;
+  paymentStatus?: 'Pending' | 'Accepted' | 'Due' | 'Paid' | string;
   symptoms?: string[];
   notes?: string;
   download?: boolean;
@@ -76,7 +76,7 @@ export const appointmentsApi = {
     return response.data;
   },
 
-  update: async (appointmentId: string, payload: Partial<Appointment>) => {
+  update: async (appointmentId: string, payload: Partial<Appointment> | Partial<CreateAppointmentPayload>) => {
     const response = await apiClient.put(`/api/v1/appointment/update/${appointmentId}`, payload);
     return response.data;
   },
