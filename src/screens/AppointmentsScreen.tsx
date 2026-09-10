@@ -126,6 +126,19 @@ export const AppointmentsScreen: React.FC = () => {
     }
   };
 
+  const handlePaymentStatusChange = async (id: string, newPaymentStatus: string) => {
+    const validStatus = newPaymentStatus as Appointment['paymentStatus'];
+    try {
+      await appointmentsApi.update(id, { paymentStatus: validStatus });
+      interactionUtils.playClick();
+      setAppointments((prev) =>
+        prev.map((a) => (a._id === id ? { ...a, paymentStatus: validStatus } : a))
+      );
+    } catch (e: any) {
+      Alert.alert('Error', e?.response?.data?.message || e?.message || 'Could not update payment status');
+    }
+  };
+
   const handleDelete = (id: string) => {
     Alert.alert('Confirm Delete', 'Are you sure you want to delete this appointment?', [
       { text: 'Cancel', style: 'cancel' },
@@ -342,12 +355,12 @@ export const AppointmentsScreen: React.FC = () => {
                     label="Payment" 
                     value={item.paymentStatus || 'Due'} 
                     options={[{label:'Paid', value:'Paid'}, {label:'Due', value:'Due'}]} 
-                    onSelect={(v) => console.log('Payment status updated to', v)} 
+                    onSelect={(v) => handlePaymentStatusChange(item._id, v)} 
                   />
                 </View>
                 <TouchableOpacity 
                   style={{ padding: 12, borderRadius: 8, backgroundColor: item.prescriptionId ? (item.prescriptionComplete ? '#d1fae5' : '#fef08a') : '#fee2e2' }}
-                  onPress={() => console.log('Open Prescription')}
+                  onPress={() => handleStatusChange(item._id, 'Completed')}
                 >
                   <Text style={{ fontSize: 18 }}>💊</Text>
                 </TouchableOpacity>

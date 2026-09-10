@@ -141,6 +141,8 @@ export interface Appointment {
     value?: string;
   };
   result?: AppointmentResultItem[];
+  prescriptionId?: string;
+  prescriptionComplete?: boolean;
   createdAt?: string;
 }
 
