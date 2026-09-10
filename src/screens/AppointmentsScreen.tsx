@@ -28,6 +28,8 @@ import { interactionUtils } from '../utils/interactionUtils';
 import { ageToDob } from '../utils/ageUtils';
 import { makeNIC } from '../utils/nicMaker';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { colors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { DropdownPicker } from '../components/DropdownPicker';
 import { GENDERS, DEPARTMENTS } from '../utils/constants';
 
@@ -58,6 +60,7 @@ const getDoctorName = (item: Appointment, doctors: Doctor[]): string => {
 
 export const AppointmentsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { colors } = useTheme();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,9 +68,46 @@ export const AppointmentsScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Derive unique past patient list for autocomplete
+  const previousPatients = React.useMemo(() => {
+    const map = new Map<string, {
+      name: string;
+      phone: string;
+      age: string;
+      gender: 'Male' | 'Female' | 'Other' | 'Others';
+      address: string;
+      department?: string;
+    }>();
+
+    appointments.forEach((appt) => {
+      const pName = (appt.name || appt.patientName || '').trim();
+      if (pName && !map.has(pName.toLowerCase())) {
+        map.set(pName.toLowerCase(), {
+          name: pName,
+          phone: appt.phone || appt.patientPhone || '',
+          age: appt.age?.toString() || appt.patientAge?.toString() || '',
+          gender: (appt.gender || appt.patientGender || 'Male') as any,
+          address: appt.address || appt.patientAddress || '',
+          department: appt.department,
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [appointments]);
+
   // New Appointment Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newPatientName, setNewPatientName] = useState('');
+
+  // Autocomplete suggestions for returning patients
+  const patientSuggestions = React.useMemo(() => {
+    const query = newPatientName.trim().toLowerCase();
+    if (!query || query.length < 1) return [];
+    return previousPatients
+      .filter((p) => p.name.toLowerCase().includes(query) && p.name.toLowerCase() !== query)
+      .slice(0, 4);
+  }, [previousPatients, newPatientName]);
   const [newPatientPhone, setNewPatientPhone] = useState('');
   const [newPatientAge, setNewPatientAge] = useState('');
   const [newPatientGender, setNewPatientGender] = useState('Male');
@@ -370,6 +410,14 @@ export const AppointmentsScreen: React.FC = () => {
                 </Text>
               </View>
 
+              <View style={styles.infoRow}>
+                <Ionicons name="cash-outline" size={14} color={colors.gold} style={{ marginRight: 4, marginTop: 1 }} />
+                <Text style={styles.detailLabel}>Fee / Price:</Text>
+                <Text style={[styles.detailValue, { color: colors.goldDark, fontWeight: '700' }]}>
+                  ₹{item.price ?? 500}
+                </Text>
+              </View>
+
               {item.symptoms && item.symptoms.length > 0 && (
                 <View style={styles.symptomsContainer}>
                   {item.symptoms.map((s, idx) => (
@@ -458,6 +506,43 @@ export const AppointmentsScreen: React.FC = () => {
                   value={newPatientName}
                   onChangeText={setNewPatientName}
                 />
+
+                {patientSuggestions.length > 0 && (
+                  <View style={styles.suggestionsBox}>
+                    <Text style={styles.suggestionsHeading}>
+                      Returning Patient Found (Tap to Auto-fill):
+                    </Text>
+                    {patientSuggestions.map((pat, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.suggestionItem}
+                        onPress={() => {
+                          interactionUtils.playClick();
+                          setNewPatientName(pat.name);
+                          if (pat.phone) setNewPatientPhone(pat.phone);
+                          if (pat.age) setNewPatientAge(pat.age);
+                          if (pat.gender) setNewPatientGender(pat.gender);
+                          if (pat.address) setNewAddress(pat.address);
+                          if (pat.department) setNewDepartment(pat.department);
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="person-circle" size={15} color={colors.primary} />
+                            <Text style={styles.suggestionName}>{pat.name}</Text>
+                            <Text style={styles.suggestionTag}>
+                              {pat.gender?.slice(0, 1)} / {pat.age ? `${pat.age}y` : '-'}
+                            </Text>
+                          </View>
+                          <Text style={styles.suggestionMeta}>
+                            {pat.phone ? `📞 ${pat.phone}` : ''} {pat.address ? `• 📍 ${pat.address}` : ''}
+                          </Text>
+                        </View>
+                        <Ionicons name="arrow-down-circle" size={20} color={colors.gold} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
 
                 <TextInput
                   style={styles.modalInput}
@@ -722,15 +807,20 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   bookBtn: {
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.gold,
     paddingHorizontal: 16,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: colors.gold,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
   },
   bookBtnText: {
     color: '#ffffff',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 14,
   },
   filterRow: {
@@ -746,7 +836,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#e2e8f0',
   },
   filterChipActive: {
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.primary,
   },
   filterChipText: {
     fontSize: 12,
@@ -996,5 +1086,47 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
     fontSize: 13,
+  },
+  suggestionsBox: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    padding: 8,
+    marginBottom: 8,
+    gap: 6,
+  },
+  suggestionsHeading: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#92400e',
+    marginBottom: 2,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#fef3c7',
+  },
+  suggestionName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  suggestionTag: {
+    fontSize: 10,
+    fontWeight: '700',
+    backgroundColor: '#e0f2fe',
+    color: '#0284c7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  suggestionMeta: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2,
   },
 });

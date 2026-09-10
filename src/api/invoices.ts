@@ -50,9 +50,31 @@ export const invoicesApi = {
     return response.data;
   },
 
-  // 9) Stats
-  getStats: async (params?: Record<string, any>) => {
-    const response = await apiClient.get('/api/v1/invoice/stats', { params });
+  // 9) Settle invoice
+  settle: async (id: string): Promise<any> => {
+    try {
+      const response = await apiClient.post(`/api/v1/invoice/${id}/settle`);
+      return response.data;
+    } catch {
+      // Fallback to update status with _settle flag
+      const response = await apiClient.put(`/api/v1/invoice/${id}`, { status: 'Paid', _settle: true });
+      return response.data;
+    }
+  },
+
+  // 10) Settle by appointment ID
+  settleByAppointmentId: async (appointmentId: string): Promise<any> => {
+    const response = await apiClient.post(`/api/v1/invoice/appointment/${appointmentId}/settle`);
     return response.data;
+  },
+
+  // 11) Stats
+  getStats: async (params?: Record<string, any>) => {
+    try {
+      const response = await apiClient.get('/api/v1/invoice/stats', { params });
+      return response.data;
+    } catch {
+      return null;
+    }
   },
 };

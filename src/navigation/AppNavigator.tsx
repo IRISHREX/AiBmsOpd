@@ -20,35 +20,43 @@ import { ReportsScreen } from '../screens/ReportsScreen';
 import { MessagesScreen } from '../screens/MessagesScreen';
 import { ReferralsScreen } from '../screens/ReferralsScreen';
 
+import { colors as staticColors } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const MainTabs = () => {
+  const { colors } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerStyle: { backgroundColor: '#ffffff' },
-        headerTitleStyle: { fontWeight: '700', color: '#0f172a' },
+        headerStyle: { backgroundColor: colors.headerBg },
+        headerTitleStyle: { fontWeight: '800', color: colors.headerText, fontSize: 17 },
+        headerTintColor: colors.headerTint,
         headerShadowVisible: false,
-        tabBarActiveTintColor: '#0284c7',
-        tabBarInactiveTintColor: '#64748b',
+        tabBarActiveTintColor: colors.tabBarActive,
+        tabBarInactiveTintColor: colors.tabBarInactive,
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopColor: '#e2e8f0',
-          paddingBottom: 4,
-          height: 60,
+          backgroundColor: colors.tabBarBg,
+          borderTopColor: colors.tabBarBorder,
+          borderTopWidth: 1,
+          paddingBottom: 6,
+          paddingTop: 6,
+          height: 62,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: '700',
         },
         tabBarIcon: ({ focused, color }) => {
           let iconName: keyof typeof Ionicons.glyphMap = 'grid-outline';
           if (route.name === 'Dashboard') iconName = focused ? 'home' : 'home-outline';
           else if (route.name === 'Appointments') iconName = focused ? 'calendar' : 'calendar-outline';
-          else if (route.name === 'Doctors') iconName = focused ? 'medical' : 'medical-outline';
-          else if (route.name === 'Prescriptions') iconName = focused ? 'document-text' : 'document-text-outline';
-          else if (route.name === 'Invoices') iconName = focused ? 'card' : 'card-outline';
+          else if (route.name === 'Doctors') iconName = focused ? 'fitness' : 'fitness-outline';
+          else if (route.name === 'Prescriptions') iconName = focused ? 'medkit' : 'medkit-outline';
+          else if (route.name === 'Invoices') iconName = focused ? 'receipt' : 'receipt-outline';
           else if (route.name === 'Menu') iconName = focused ? 'menu' : 'menu-outline';
           return <Ionicons name={iconName} size={22} color={color} />;
         },
@@ -77,7 +85,7 @@ const MainTabs = () => {
       <Tab.Screen
         name="Invoices"
         component={InvoicesScreen}
-        options={{ title: 'Billing' }}
+        options={{ title: 'Billing & Invoices' }}
       />
       <Tab.Screen
         name="Menu"
@@ -90,18 +98,27 @@ const MainTabs = () => {
 
 export const AppNavigator: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
+  const { colors } = useTheme();
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0284c7" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          headerStyle: { backgroundColor: colors.headerBg },
+          headerTintColor: colors.headerTint,
+          headerTitleStyle: { fontWeight: '800', color: colors.headerText },
+          headerBackTitleVisible: false,
+        }}
+      >
         {!isAuthenticated ? (
           <Stack.Screen name="Login" component={LoginScreen} />
         ) : (

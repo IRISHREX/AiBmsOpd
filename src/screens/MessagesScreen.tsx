@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,11 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import api from '../api/client';
 import { interactionUtils } from '../utils/interactionUtils';
+import { useTheme } from '../context/ThemeContext';
+import { colors } from '../theme/colors';
 
 interface Message {
   _id: string;
@@ -29,6 +32,7 @@ interface Message {
 }
 
 export const MessagesScreen: React.FC = () => {
+  const { colors: theme } = useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -42,15 +46,9 @@ export const MessagesScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [content, setContent] = useState('');
-  // In a real app we'd have a dropdown for doctors/recipients. For now, simple text or leave out recipient.
 
-  useEffect(() => {
-    fetchMessages();
-  }, []);
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
-      setIsLoading(true);
       const { data } = await api.get('/api/v1/message/getall');
       setMessages(data.messages || []);
     } catch (e: any) {
@@ -59,15 +57,19 @@ export const MessagesScreen: React.FC = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
-
-  const onRefresh = React.useCallback(() => {
-    setIsRefreshing(true);
-    fetchMessages();
   }, []);
 
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    fetchMessages();
+  }, [fetchMessages]);
+
   const handleSend = async () => {
-    if (!firstName || !email || !content) {
+    if (!firstName.trim() || !email.trim() || !content.trim()) {
       Alert.alert('Validation Error', 'First name, email, and message are required.');
       return;
     }
@@ -75,23 +77,20 @@ export const MessagesScreen: React.FC = () => {
     try {
       setIsSubmitting(true);
       await api.post('/api/v1/message/send', {
-        firstName,
-        lastName,
-        email,
-        phone,
-        message: content,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        message: content.trim(),
       });
       interactionUtils.playSuccess();
       Alert.alert('Success', 'Message sent successfully');
       setIsComposeOpen(false);
-      
-      // Reset form
       setFirstName('');
       setLastName('');
       setEmail('');
       setPhone('');
       setContent('');
-      
       fetchMessages();
     } catch (e: any) {
       Alert.alert('Error', e.response?.data?.message || 'Failed to send message');
@@ -108,8 +107,8 @@ export const MessagesScreen: React.FC = () => {
         style: 'destructive',
         onPress: async () => {
           try {
-            await api.post('/api/v1/message/bulk-delete', { ids: [id] }); // FE used bulk-delete
-            interactionUtils.playSuccess();
+            await api.post('/api/v1/message/bulk-delete', { ids: [id] });
+            interactionUtils.playClick();
             setMessages(prev => prev.filter(m => m._id !== id));
           } catch (e: any) {
             Alert.alert('Error', 'Failed to delete message');
@@ -121,6 +120,7 @@ export const MessagesScreen: React.FC = () => {
 
   const toggleReadStatus = async (id: string, isCurrentlyRead: boolean) => {
     try {
+      interactionUtils.playClick();
       await api.post('/api/v1/message/bulk-update', { ids: [id], read: !isCurrentlyRead });
       setMessages(prev => prev.map(m => m._id === id ? { ...m, isRead: !isCurrentlyRead } : m));
     } catch (e: any) {
@@ -128,43 +128,116 @@ export const MessagesScreen: React.FC = () => {
     }
   };
 
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return '';
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Messages</Text>
-        <TouchableOpacity style={styles.composeBtn} onPress={() => setIsComposeOpen(true)}>
-          <Text style={styles.composeBtnText}>+ Compose</Text>
+        <View>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>Communication Inbox</Text>
+          <Text style={[styles.subtitle, { color: theme.textMuted }]}>
+            {messages.filter(m => !m.isRead).length} unread inquiries
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.composeBtn, { backgroundColor: theme.primary }]}
+          onPress={() => setIsComposeOpen(true)}
+        >
+          <Ionicons name="create-outline" size={16} color="#ffffff" style={{ marginRight: 4 }} />
+          <Text style={styles.composeBtnText}>Compose</Text>
         </TouchableOpacity>
       </View>
 
       {isLoading ? (
-        <ActivityIndicator size="large" color="#0284c7" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={messages}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.primary}
+              colors={[theme.primary]}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No messages found</Text>
+              <Ionicons name="chatbubbles-outline" size={48} color={theme.textMuted} style={{ marginBottom: 8 }} />
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>No messages in your inbox</Text>
             </View>
           }
-          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
           renderItem={({ item }) => (
-            <View style={[styles.card, !item.isRead && styles.unreadCard]}>
+            <View
+              style={[
+                styles.card,
+                { backgroundColor: theme.cardBg, borderColor: item.isRead ? theme.border : theme.primary },
+                !item.isRead && { borderWidth: 1.5 },
+              ]}
+            >
               <View style={styles.cardHeader}>
-                <Text style={styles.name}>{item.firstName} {item.lastName}</Text>
-                <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                  {!item.isRead && (
+                    <View style={[styles.unreadDot, { backgroundColor: theme.gold }]} />
+                  )}
+                  <Text style={[styles.name, { color: theme.textPrimary }]}>
+                    {item.firstName} {item.lastName}
+                  </Text>
+                </View>
+                <Text style={[styles.date, { color: theme.textMuted }]}>
+                  {formatDate(item.createdAt)}
+                </Text>
               </View>
-              <Text style={styles.contactInfo}>{item.email} • {item.phone}</Text>
-              <Text style={styles.messageText}>{item.message}</Text>
+
+              <View style={styles.contactRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="mail-outline" size={12} color={theme.textMuted} />
+                  <Text style={[styles.contactInfo, { color: theme.textSecondary }]}>{item.email}</Text>
+                </View>
+                {item.phone ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="call-outline" size={12} color={theme.textMuted} />
+                    <Text style={[styles.contactInfo, { color: theme.textSecondary }]}>{item.phone}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <Text style={[styles.messageText, { color: theme.textPrimary }]}>{item.message}</Text>
               
-              <View style={styles.cardActions}>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => toggleReadStatus(item._id, item.isRead)}>
-                  <Text style={styles.actionBtnText}>{item.isRead ? 'Mark Unread' : 'Mark Read'}</Text>
+              <View style={[styles.cardActions, { borderTopColor: theme.borderLight }]}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+                  onPress={() => toggleReadStatus(item._id, item.isRead)}
+                >
+                  <Ionicons
+                    name={item.isRead ? "mail-unread-outline" : "mail-open-outline"}
+                    size={14}
+                    color={theme.textSecondary}
+                  />
+                  <Text style={[styles.actionBtnText, { color: theme.textSecondary }]}>
+                    {item.isRead ? 'Mark Unread' : 'Mark as Read'}
+                  </Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#fef2f2' }]} onPress={() => handleDelete(item._id)}>
-                  <Text style={[styles.actionBtnText, { color: '#ef4444' }]}>Delete</Text>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: theme.dangerSoft, borderColor: theme.dangerBorder }]}
+                  onPress={() => handleDelete(item._id)}
+                >
+                  <Ionicons name="trash-outline" size={14} color={theme.danger} />
+                  <Text style={[styles.actionBtnText, { color: theme.danger }]}>Delete</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -174,23 +247,90 @@ export const MessagesScreen: React.FC = () => {
 
       {/* Compose Modal */}
       <Modal visible={isComposeOpen} animationType="slide" transparent>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.modalContent}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>Compose Message</Text>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Compose New Message</Text>
+                <TouchableOpacity onPress={() => setIsComposeOpen(false)}>
+                  <Ionicons name="close-circle-outline" size={24} color={theme.textMuted} />
+                </TouchableOpacity>
+              </View>
               
-              <TextInput style={styles.input} placeholder="First Name *" placeholderTextColor="#94a3b8" value={firstName} onChangeText={setFirstName} />
-              <TextInput style={styles.input} placeholder="Last Name" placeholderTextColor="#94a3b8" value={lastName} onChangeText={setLastName} />
-              <TextInput style={styles.input} placeholder="Email *" placeholderTextColor="#94a3b8" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
-              <TextInput style={styles.input} placeholder="Phone" placeholderTextColor="#94a3b8" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
-              <TextInput style={[styles.input, { height: 100, textAlignVertical: 'top' }]} placeholder="Type your message here... *" placeholderTextColor="#94a3b8" multiline value={content} onChangeText={setContent} />
+              <View style={styles.row}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>First Name *</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                    placeholder="First Name"
+                    placeholderTextColor={theme.textMuted}
+                    value={firstName}
+                    onChangeText={setFirstName}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Last Name</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                    placeholder="Last Name"
+                    placeholderTextColor={theme.textMuted}
+                    value={lastName}
+                    onChangeText={setLastName}
+                  />
+                </View>
+              </View>
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Recipient Email *</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                placeholder="recipient@example.com"
+                placeholderTextColor={theme.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Contact Phone</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                placeholder="Phone Number"
+                placeholderTextColor={theme.textMuted}
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
+              />
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Message Content *</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary, height: 100, textAlignVertical: 'top' }]}
+                placeholder="Type your message here..."
+                placeholderTextColor={theme.textMuted}
+                multiline
+                value={content}
+                onChangeText={setContent}
+              />
 
               <View style={styles.modalButtons}>
-                <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={() => setIsComposeOpen(false)}>
-                  <Text style={styles.btnCancelText}>Cancel</Text>
+                <TouchableOpacity
+                  style={[styles.btn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderWidth: 1 }]}
+                  onPress={() => setIsComposeOpen(false)}
+                >
+                  <Text style={[styles.btnCancelText, { color: theme.textSecondary }]}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.btn, styles.btnConfirm]} onPress={handleSend} disabled={isSubmitting}>
-                  {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnConfirmText}>Send</Text>}
+                <TouchableOpacity
+                  style={[styles.btn, { backgroundColor: theme.primary }]}
+                  onPress={handleSend}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.btnConfirmText}>Send Message</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -202,32 +342,170 @@ export const MessagesScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc', padding: 16 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  title: { fontSize: 24, fontWeight: '700', color: '#0f172a' },
-  composeBtn: { backgroundColor: '#0284c7', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
-  composeBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  list: { paddingBottom: 20 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#94a3b8', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 2, borderWidth: 1, borderColor: '#f1f5f9' },
-  unreadCard: { borderColor: '#0ea5e9', backgroundColor: '#f0f9ff' },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  name: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
-  date: { fontSize: 12, color: '#64748b' },
-  contactInfo: { fontSize: 13, color: '#64748b', marginBottom: 8 },
-  messageText: { fontSize: 15, color: '#334155', lineHeight: 22, marginBottom: 16 },
-  cardActions: { flexDirection: 'row', gap: 12 },
-  actionBtn: { flex: 1, alignItems: 'center', paddingVertical: 8, backgroundColor: '#f1f5f9', borderRadius: 8 },
-  actionBtnText: { color: '#334155', fontWeight: '600', fontSize: 14 },
-  empty: { padding: 40, alignItems: 'center' },
-  emptyText: { color: '#94a3b8', fontSize: 16 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '90%' },
-  modalTitle: { fontSize: 20, fontWeight: '700', color: '#0f172a', marginBottom: 20, textAlign: 'center' },
-  input: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 14, fontSize: 16, color: '#0f172a', marginBottom: 12 },
-  modalButtons: { flexDirection: 'row', gap: 12, marginTop: 10, paddingBottom: 20 },
-  btn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  btnCancel: { backgroundColor: '#f1f5f9' },
-  btnCancelText: { color: '#475569', fontSize: 16, fontWeight: '600' },
-  btnConfirm: { backgroundColor: '#0284c7' },
-  btnConfirmText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  subtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  composeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  composeBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  list: {
+    paddingBottom: 24,
+  },
+  card: {
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  date: {
+    fontSize: 11,
+  },
+  contactRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+  },
+  contactInfo: {
+    fontSize: 12,
+  },
+  messageText: {
+    fontSize: 13.5,
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 10,
+    borderTopWidth: 1,
+    paddingTop: 10,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  actionBtnText: {
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  empty: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 4,
+    marginLeft: 2,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+    paddingBottom: 20,
+  },
+  btn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  btnCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  btnConfirmText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
 });

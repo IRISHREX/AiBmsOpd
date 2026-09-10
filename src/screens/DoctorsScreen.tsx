@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   View,
@@ -15,7 +15,9 @@ import {
   UIManager,
   ScrollView,
   KeyboardAvoidingView,
+  RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -28,10 +30,14 @@ import { ageToDob } from '../utils/ageUtils';
 import { makeNIC } from '../utils/nicMaker';
 import { DropdownPicker } from '../components/DropdownPicker';
 import { GENDERS, DEPARTMENTS } from '../utils/constants';
+import { useTheme } from '../context/ThemeContext';
+import { colors } from '../theme/colors';
 
 export const DoctorsScreen: React.FC = () => {
+  const { colors: theme } = useTheme();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Capacity Checker state
@@ -57,33 +63,35 @@ export const DoctorsScreen: React.FC = () => {
   const [docCompounder, setDocCompounder] = useState('');
   const [step, setStep] = useState(1);
 
-  const fetchDoctors = async () => {
+  const fetchDoctors = useCallback(async () => {
     try {
       const data = await doctorsApi.getAll();
-      const list = Array.isArray(data) ? data : [];
-      setDoctors(list);
-      if (list.length > 0 && !selectedDocId) {
-        setSelectedDocId(list[0]._id);
-      }
+      setDoctors(data);
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || e?.message || 'Failed to load doctors:');
-      console.warn('Failed to load doctors:', e);
+      Alert.alert('Error', e.message || 'Failed to fetch doctors');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDoctors();
-  }, []);
+  }, [fetchDoctors]);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    fetchDoctors();
+  }, [fetchDoctors]);
 
   const handleCheckCapacity = async (doctorId: string, date: string) => {
     setSelectedDocId(doctorId);
     setIsLoadingCapacity(true);
     try {
-      const res = await doctorsApi.getCapacity({ doctorId, date });
-      setCapacityData(res);
-    } catch (e: any) {
+      interactionUtils.playClick();
+      const cap = await doctorsApi.getCapacity({ doctorId, date });
+      setCapacityData(cap);
+    } catch {
       setCapacityData(null);
     } finally {
       setIsLoadingCapacity(false);
@@ -91,169 +99,221 @@ export const DoctorsScreen: React.FC = () => {
   };
 
   const handleAddDoctor = async () => {
-    if (!docName.trim() || !docSpecialty.trim()) {
-      Alert.alert('Validation', 'Name and specialty are required.');
+    if (!docName || !docEmail || !docSpecialty) {
+      Alert.alert('Validation Error', 'Name, Email, and Specialization are required');
       return;
     }
 
     try {
-      const calculatedNic = makeNIC(docPhone.trim(), docAge);
-      const calculatedDob = ageToDob(docAge);
+      interactionUtils.playClick();
+      const nameParts = docName.trim().split(' ');
+      const firstName = nameParts[0] || 'Dr.';
+      const lastName = nameParts.slice(1).join(' ') || 'Physician';
 
-      await doctorsApi.addNew({
-        firstName: docName.trim().split(' ')[0],
-        lastName: docName.trim().split(' ').slice(1).join(' '),
-        name: docName.trim(),
+      const doctorData = {
+        firstName,
+        lastName,
         email: docEmail.trim(),
-        phone: docPhone.trim(),
-        age: docAge ? parseInt(docAge, 10) : undefined,
+        phone: docPhone.trim() || '1234567890',
         gender: docGender,
-        nic: calculatedNic,
-        dob: calculatedDob,
-        specialization: docSpecialty.trim(),
-        doctorDepartment: docDepartment.trim(),
-        department: docDepartment.trim(),
-        qualifications: docQualifications.trim(),
-        consultationFee: parseFloat(docFee) || 500,
+        dob: ageToDob(docAge || '35'),
+        nic: makeNIC(docPhone.trim() || '12345678901', docAge || '35'),
+        doctorDepartment: docDepartment || 'Pediatrics',
+        specialization: docSpecialty,
+        qualifications: docQualifications || 'MBBS',
         visitingFee: parseFloat(docFee) || 500,
-        role: 'doctor',
-      });
+        compounderName: docCompounder || undefined,
+      };
+
+      await doctorsApi.addNew(doctorData);
+      interactionUtils.playSuccess();
+      Alert.alert('Success', `Dr. ${docName} added successfully`);
+
       setIsAddDoctorOpen(false);
+      setStep(1);
       setDocName('');
       setDocEmail('');
       setDocPhone('');
       setDocAge('');
-      setDocGender('Male');
       setDocSpecialty('');
       setDocDepartment('');
       setDocQualifications('');
       setDocFee('500');
-      
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      interactionUtils.playSuccess();
-      interactionUtils.triggerNotification('Doctor Added', `Dr. ${docName} was added to the directory.`);
+      setDocCompounder('');
+
       fetchDoctors();
-      Alert.alert('Success', 'Doctor profile created successfully!');
     } catch (e: any) {
-      Alert.alert('Error', e.response?.data?.message || 'Failed to add doctor');
+      Alert.alert('Error', e.response?.data?.message || e.message || 'Failed to add doctor');
     }
   };
 
-  const filteredDoctors = doctors.filter((doc) => {
-    const q = searchQuery.toLowerCase();
-    return (
-      doc.name?.toLowerCase().includes(q) ||
-      doc.specialization?.toLowerCase().includes(q)
-    );
-  });
+  const filteredDoctors = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return doctors;
+    return doctors.filter((doc) => {
+      const name = (doc.name || `${doc.firstName || ''} ${doc.lastName || ''}`).toLowerCase();
+      const spec = (doc.specialization || '').toLowerCase();
+      const dept = (doc.department || doc.doctorDepartment || '').toLowerCase();
+      return name.includes(q) || spec.includes(q) || dept.includes(q);
+    });
+  }, [doctors, searchQuery]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Top Search & Add Bar */}
       <View style={styles.headerRow}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="🔍 Search doctor or specialty..."
-          placeholderTextColor="#94a3b8"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        <View style={[styles.searchWrapper, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+          <Ionicons name="search-outline" size={18} color={theme.textMuted} style={{ marginRight: 8 }} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.textPrimary }]}
+            placeholder="Search doctors, specialty, dept..."
+            placeholderTextColor={theme.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={16} color={theme.textMuted} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
         <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => setIsAddDoctorOpen(true)}
+          style={[styles.addBtn, { backgroundColor: theme.primary }]}
+          onPress={() => {
+            interactionUtils.playClick();
+            setIsAddDoctorOpen(true);
+          }}
         >
-          <Text style={styles.addBtnText}>+ Doctor</Text>
+          <Ionicons name="person-add-outline" size={18} color="#ffffff" style={{ marginRight: 4 }} />
+          <Text style={styles.addBtnText}>Add</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Capacity & Slot Checker Bar */}
-      <View style={styles.capacitySection}>
-        <Text style={styles.capacityTitle}>⚡ Quick Capacity Checker</Text>
-        <View style={styles.capacityInputs}>
+      {/* Capacity Checker Section */}
+      <View style={[styles.capacitySection, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <Ionicons name="calendar-outline" size={16} color={theme.gold} />
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Live OPD Slot Capacity</Text>
+        </View>
+        <View style={styles.capacityRow}>
           <TouchableOpacity
-            style={[styles.dateInput, { justifyContent: 'center' }]}
+            style={[styles.dateSelectorBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
             onPress={() => setShowDatePicker(true)}
           >
-            <Text style={{ color: capacityDate ? '#0f172a' : '#94a3b8' }}>
-              {capacityDate || 'YYYY-MM-DD'}
-            </Text>
+            <Ionicons name="time-outline" size={14} color={theme.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.dateText, { color: theme.textPrimary }]}>{capacityDate}</Text>
           </TouchableOpacity>
-          
+
           {showDatePicker && (
             <DateTimePicker
-              value={capacityDate ? new Date(capacityDate) : new Date()}
+              value={new Date(capacityDate)}
               mode="date"
-              display="default"
-              onChange={(event, date) => {
-                setShowDatePicker(Platform.OS === 'ios');
-                if (date) {
-                  setCapacityDate(date.toISOString().split('T')[0]);
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={(event, selected) => {
+                setShowDatePicker(false);
+                if (selected) {
+                  const d = selected.toISOString().split('T')[0];
+                  setCapacityDate(d);
+                  if (selectedDocId) handleCheckCapacity(selectedDocId, d);
                 }
               }}
             />
           )}
 
           <TouchableOpacity
-            style={styles.checkBtn}
-            onPress={() => selectedDocId && handleCheckCapacity(selectedDocId, capacityDate)}
+            style={[styles.checkBtn, { backgroundColor: theme.primarySoft, borderColor: theme.primaryMuted }]}
+            onPress={() => {
+              if (selectedDocId) handleCheckCapacity(selectedDocId, capacityDate);
+              else Alert.alert('Notice', 'Select a doctor below to view live slot availability');
+            }}
           >
-            <Text style={styles.checkBtnText}>Check Slots</Text>
+            <Text style={[styles.checkBtnText, { color: theme.primary }]}>Refresh Slot</Text>
           </TouchableOpacity>
         </View>
 
         {isLoadingCapacity ? (
-          <ActivityIndicator size="small" color="#0284c7" style={{ marginTop: 8 }} />
+          <ActivityIndicator size="small" color={theme.primary} style={{ marginTop: 8 }} />
         ) : capacityData ? (
-          <View style={styles.capacityResults}>
-            <Text style={styles.capacityResultText}>
-              Capacity: {capacityData.totalCapacity || '20'} | Booked:{' '}
-              {capacityData.bookedSlots || 0} | Available:{' '}
-              <Text style={{ fontWeight: '700', color: '#059669' }}>
+          <View style={[styles.capacityResults, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+            <Text style={[styles.capacityResultText, { color: theme.textSecondary }]}>
+              Total Capacity: <Text style={{ fontWeight: '700', color: theme.textPrimary }}>{capacityData.totalCapacity || '20'}</Text> | Booked: <Text style={{ fontWeight: '700', color: theme.warning }}>{capacityData.bookedSlots || 0}</Text> | Available:{' '}
+              <Text style={{ fontWeight: '800', color: theme.success }}>
                 {capacityData.availableSlots ?? 20} slots
               </Text>
             </Text>
           </View>
-        ) : null}
+        ) : (
+          <Text style={[styles.capacityHint, { color: theme.textMuted }]}>
+            Tap any doctor below to inspect real-time schedule & slot availability
+          </Text>
+        )}
       </View>
 
       {/* Doctors List */}
       {isLoading ? (
-        <ActivityIndicator size="large" color="#0284c7" style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
           data={filteredDoctors}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
-          initialNumToRender={10}
-          maxToRenderPerBatch={5}
-          windowSize={11}
-          removeClippedSubviews={true}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.primary}
+              colors={[theme.primary]}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No doctors registered</Text>
+              <Ionicons name="medical-outline" size={48} color={theme.textMuted} style={{ marginBottom: 8 }} />
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>No doctors found</Text>
             </View>
           }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.doctorCard,
-                selectedDocId === item._id && styles.doctorCardSelected,
-              ]}
-              onPress={() => handleCheckCapacity(item._id, capacityDate)}
-            >
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarText}>
-                  {item.name ? item.name.charAt(0).toUpperCase() : 'D'}
-                </Text>
-              </View>
-              <View style={styles.doctorInfo}>
-                <Text style={styles.doctorName}>{item.name}</Text>
-                <Text style={styles.specialty}>{item.specialization}</Text>
-                <Text style={styles.metaText}>
-                  📞 {item.phone || 'N/A'} • Fee: ₹{item.visitingFee || 500}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
+          renderItem={({ item }) => {
+            const isSelected = selectedDocId === item._id;
+            const docDisplayName = item.name || `Dr. ${item.firstName || ''} ${item.lastName || ''}`;
+
+            return (
+              <TouchableOpacity
+                style={[
+                  styles.doctorCard,
+                  { backgroundColor: theme.cardBg, borderColor: theme.border },
+                  isSelected && { borderColor: theme.gold, borderWidth: 1.8 },
+                ]}
+                onPress={() => handleCheckCapacity(item._id, capacityDate)}
+              >
+                <View style={[styles.avatarCircle, { backgroundColor: theme.primaryDark, borderColor: theme.gold }]}>
+                  <Text style={[styles.avatarText, { color: theme.goldBright }]}>
+                    {item.name ? item.name.charAt(0).toUpperCase() : 'D'}
+                  </Text>
+                </View>
+                <View style={styles.doctorInfo}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[styles.doctorName, { color: theme.textPrimary }]}>{docDisplayName}</Text>
+                    {isSelected && (
+                      <View style={[styles.selectedBadge, { backgroundColor: theme.goldSoft, borderColor: theme.goldBorder }]}>
+                        <Ionicons name="checkmark-circle" size={12} color={theme.goldDark} />
+                        <Text style={[styles.selectedBadgeText, { color: theme.goldDark }]}>Active</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.specialty, { color: theme.primary }]}>{item.specialization}</Text>
+                  <View style={styles.metaRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="call-outline" size={12} color={theme.textMuted} />
+                      <Text style={[styles.metaText, { color: theme.textSecondary }]}>{item.phone || 'N/A'}</Text>
+                    </View>
+                    <Text style={[styles.metaText, { color: theme.textMuted }]}>•</Text>
+                    <Text style={[styles.metaText, { color: theme.goldDark, fontWeight: '700' }]}>
+                      Fee: ₹{item.visitingFee || 500}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
         />
       )}
 
@@ -263,48 +323,138 @@ export const DoctorsScreen: React.FC = () => {
           style={styles.modalOverlay} 
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>Add New Doctor (Step {step}/2)</Text>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
+                  Add New Doctor (Step {step}/2)
+                </Text>
+                <TouchableOpacity onPress={() => { setIsAddDoctorOpen(false); setStep(1); }}>
+                  <Ionicons name="close-circle-outline" size={24} color={theme.textMuted} />
+                </TouchableOpacity>
+              </View>
 
               {step === 1 ? (
                 <>
-                  <TextInput style={styles.input} placeholder="Dr. Full Name" placeholderTextColor="#94a3b8" value={docName} onChangeText={setDocName} />
-                  <TextInput style={styles.input} placeholder="Email Address" placeholderTextColor="#94a3b8" keyboardType="email-address" autoCapitalize="none" value={docEmail} onChangeText={setDocEmail} />
-                  <TextInput style={styles.input} placeholder="Phone Number" placeholderTextColor="#94a3b8" keyboardType="phone-pad" value={docPhone} onChangeText={setDocPhone} />
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Full Name *</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                    placeholder="Dr. Full Name"
+                    placeholderTextColor={theme.textMuted}
+                    value={docName}
+                    onChangeText={setDocName}
+                  />
+
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Official Email *</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                    placeholder="doctor@hospital.com"
+                    placeholderTextColor={theme.textMuted}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={docEmail}
+                    onChangeText={setDocEmail}
+                  />
+
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Contact Phone *</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                    placeholder="10-digit Phone"
+                    placeholderTextColor={theme.textMuted}
+                    keyboardType="phone-pad"
+                    value={docPhone}
+                    onChangeText={setDocPhone}
+                  />
                   
                   <View style={{ flexDirection: 'row', gap: 10, zIndex: 10 }}>
-                    <TextInput style={[styles.input, { flex: 1 }]} placeholder="Age" placeholderTextColor="#94a3b8" keyboardType="numeric" value={docAge} onChangeText={setDocAge} />
                     <View style={{ flex: 1 }}>
+                      <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Age</Text>
+                      <TextInput
+                        style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                        placeholder="e.g. 38"
+                        placeholderTextColor={theme.textMuted}
+                        keyboardType="numeric"
+                        value={docAge}
+                        onChangeText={setDocAge}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Gender</Text>
                       <DropdownPicker label="" placeholder="Gender" value={docGender} options={GENDERS} onSelect={setDocGender} />
                     </View>
                   </View>
 
                   <View style={styles.modalButtons}>
-                    <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={() => { setIsAddDoctorOpen(false); setStep(1); }}>
-                      <Text style={styles.btnCancelText}>Cancel</Text>
+                    <TouchableOpacity
+                      style={[styles.btn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderWidth: 1 }]}
+                      onPress={() => { setIsAddDoctorOpen(false); setStep(1); }}
+                    >
+                      <Text style={[styles.btnCancelText, { color: theme.textSecondary }]}>Cancel</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.btn, styles.btnConfirm]} onPress={() => setStep(2)}>
-                      <Text style={styles.btnConfirmText}>Next</Text>
+                    <TouchableOpacity
+                      style={[styles.btn, { backgroundColor: theme.primary }]}
+                      onPress={() => setStep(2)}
+                    >
+                      <Text style={styles.btnConfirmText}>Next (Step 2)</Text>
                     </TouchableOpacity>
                   </View>
                 </>
               ) : (
                 <>
-                  <TextInput style={styles.input} placeholder="Specialization (e.g., Cardiologist)" placeholderTextColor="#94a3b8" value={docSpecialty} onChangeText={setDocSpecialty} />
-                  <View style={{ zIndex: 9 }}>
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Specialization *</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                    placeholder="Cardiology / Orthopedics / General"
+                    placeholderTextColor={theme.textMuted}
+                    value={docSpecialty}
+                    onChangeText={setDocSpecialty}
+                  />
+
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Department</Text>
+                  <View style={{ zIndex: 9, marginBottom: 10 }}>
                     <DropdownPicker label="" placeholder="Department" value={docDepartment} options={DEPARTMENTS} onSelect={setDocDepartment} />
                   </View>
-                  <TextInput style={styles.input} placeholder="Qualifications (e.g. MBBS, MD)" placeholderTextColor="#94a3b8" value={docQualifications} onChangeText={setDocQualifications} />
-                  <TextInput style={styles.input} placeholder="Consultation Fee (₹)" placeholderTextColor="#94a3b8" keyboardType="numeric" value={docFee} onChangeText={setDocFee} />
-                  <TextInput style={styles.input} placeholder="Assign Compounder (Name or ID)" placeholderTextColor="#94a3b8" value={docCompounder} onChangeText={setDocCompounder} />
+
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Qualifications</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                    placeholder="e.g. MBBS, MD (Medicine)"
+                    placeholderTextColor={theme.textMuted}
+                    value={docQualifications}
+                    onChangeText={setDocQualifications}
+                  />
+
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Consultation Fee (₹)</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                    placeholder="500"
+                    placeholderTextColor={theme.textMuted}
+                    keyboardType="numeric"
+                    value={docFee}
+                    onChangeText={setDocFee}
+                  />
+
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Assigned Compounder</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                    placeholder="Compounder Name"
+                    placeholderTextColor={theme.textMuted}
+                    value={docCompounder}
+                    onChangeText={setDocCompounder}
+                  />
 
                   <View style={styles.modalButtons}>
-                    <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={() => setStep(1)}>
-                      <Text style={styles.btnCancelText}>Back</Text>
+                    <TouchableOpacity
+                      style={[styles.btn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderWidth: 1 }]}
+                      onPress={() => setStep(1)}
+                    >
+                      <Text style={[styles.btnCancelText, { color: theme.textSecondary }]}>Back</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.btn, styles.btnConfirm]} onPress={handleAddDoctor}>
-                      <Text style={styles.btnConfirmText}>Add Doctor</Text>
+                    <TouchableOpacity
+                      style={[styles.btn, { backgroundColor: theme.primary }]}
+                      onPress={handleAddDoctor}
+                    >
+                      <Text style={styles.btnConfirmText}>Save Doctor</Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -320,200 +470,227 @@ export const DoctorsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   headerRow: {
     flexDirection: 'row',
-    padding: 12,
+    padding: 14,
     gap: 8,
+  },
+  searchWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    height: 44,
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
     fontSize: 14,
-    color: '#0f172a',
+    paddingVertical: 8,
   },
   addBtn: {
-    backgroundColor: '#0284c7',
-    paddingHorizontal: 16,
-    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    height: 44,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   addBtnText: {
     color: '#ffffff',
-    fontWeight: '600',
     fontSize: 14,
+    fontWeight: '700',
   },
   capacitySection: {
-    backgroundColor: '#ffffff',
-    marginHorizontal: 12,
+    marginHorizontal: 14,
     marginBottom: 10,
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  capacityTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#334155',
-    marginBottom: 8,
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
   },
-  capacityInputs: {
+  capacityRow: {
     flexDirection: 'row',
     gap: 8,
+    alignItems: 'center',
   },
-  dateInput: {
+  dateSelectorBtn: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  dateText: {
     fontSize: 13,
+    fontWeight: '700',
   },
   checkBtn: {
-    backgroundColor: '#0369a1',
+    borderWidth: 1,
+    borderRadius: 10,
     paddingHorizontal: 14,
-    borderRadius: 8,
-    justifyContent: 'center',
+    paddingVertical: 9,
   },
   checkBtnText: {
-    color: '#ffffff',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   capacityResults: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: '#f0fdf4',
-    borderRadius: 6,
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   capacityResultText: {
     fontSize: 12,
-    color: '#166534',
+    textAlign: 'center',
+  },
+  capacityHint: {
+    fontSize: 11,
+    marginTop: 6,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   list: {
-    padding: 12,
-    paddingBottom: 30,
+    paddingHorizontal: 14,
+    paddingBottom: 24,
   },
   doctorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     elevation: 2,
   },
-  doctorCardSelected: {
-    borderColor: '#0284c7',
-    backgroundColor: '#f0f9ff',
-  },
   avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#e0f2fe',
-    alignItems: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
+    borderWidth: 1.5,
   },
   avatarText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0284c7',
+    fontSize: 20,
+    fontWeight: '800',
   },
   doctorInfo: {
     flex: 1,
   },
   doctorName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  selectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  selectedBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
   },
   specialty: {
-    fontSize: 13,
-    color: '#0284c7',
-    fontWeight: '500',
-    marginTop: 1,
+    fontSize: 12.5,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
   },
   metaText: {
     fontSize: 12,
-    color: '#64748b',
-    marginTop: 3,
   },
   empty: {
+    padding: 40,
     alignItems: 'center',
-    padding: 30,
   },
   emptyText: {
-    color: '#94a3b8',
     fontSize: 14,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 20,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 18,
+    fontWeight: '800',
+  },
+  fieldLabel: {
+    fontSize: 12,
     fontWeight: '700',
-    color: '#0f172a',
-    marginBottom: 14,
+    marginBottom: 4,
+    marginLeft: 2,
   },
   input: {
-    backgroundColor: '#f8fafc',
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    color: '#0f172a',
+    paddingVertical: 9,
+    fontSize: 13,
     marginBottom: 10,
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
     gap: 10,
     marginTop: 10,
+    paddingBottom: 20,
   },
   btn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  btnCancel: {
-    backgroundColor: '#f1f5f9',
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
   },
   btnCancelText: {
-    color: '#475569',
-    fontWeight: '600',
-  },
-  btnConfirm: {
-    backgroundColor: '#0284c7',
+    fontSize: 14,
+    fontWeight: '700',
   },
   btnConfirmText: {
     color: '#ffffff',
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

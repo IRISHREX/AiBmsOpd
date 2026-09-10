@@ -14,11 +14,17 @@ import {
   KeyboardType,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import { Ionicons } from '@expo/vector-icons';
 import { prescriptionsApi } from '../api/prescriptions';
 import { appointmentsApi } from '../api/appointments';
 import { Medicine, PrescriptionItem, Appointment } from '../types';
+import { useTheme } from '../context/ThemeContext';
+import { PrescriptionTemplateModal } from '../components/PrescriptionTemplateModal';
+import { PrescriptionPreviewModal } from '../components/PrescriptionPreviewModal';
+import { PrescriptionSettingsModal } from '../components/PrescriptionSettingsModal';
+import { PrescriptionTemplate } from '../utils/prescriptionTemplates';
+import * as Haptics from 'expo-haptics';
 
-// Vital field config: label, keyboard type, placeholder hint, min, max
 const VITAL_CONFIG: Record<string, { label: string; keyboardType: KeyboardType; placeholder: string; min?: number; max?: number; unit?: string }> = {
   BP:     { label: 'BP (Sys/Dia)', keyboardType: 'default', placeholder: 'e.g. 120/80', unit: 'mmHg' },
   PR:     { label: 'Pulse Rate',   keyboardType: 'numeric',  placeholder: 'e.g. 72',    min: 40, max: 200, unit: 'bpm' },
@@ -37,7 +43,6 @@ const getVitalWarning = (key: string, val: string): string | null => {
   if (isNaN(num)) return null;
   if (cfg.min !== undefined && num < cfg.min) return `Low! Min: ${cfg.min} ${cfg.unit || ''}`;
   if (cfg.max !== undefined && num > cfg.max) return `High! Max: ${cfg.max} ${cfg.unit || ''}`;
-  // Special BMI interpretation
   if (key === 'BMI') {
     if (num < 18.5) return 'Underweight';
     if (num >= 30) return 'Obese';
@@ -48,6 +53,8 @@ const getVitalWarning = (key: string, val: string): string | null => {
 
 export const PrescriptionsScreen: React.FC = () => {
   const route = useRoute<any>();
+  const { colors } = useTheme();
+
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [selectedApptId, setSelectedApptId] = useState(route?.params?.appointmentId || '');
@@ -62,22 +69,30 @@ export const PrescriptionsScreen: React.FC = () => {
   // ObGyn State
   const [obgyn, setObgyn] = useState({ Gravida: '', Parity: '', LMP: '', EDD: '', POG: '', LCB: '', MOD: '' });
   // Clinical Findings State
-  const [clinical, setClinical] = useState({ polar: '', icterus: '', edema: '', cyanosis: '', clubbing: '', lymph_nodes: '', chest: '', cvs: '', others: '' });
+  const [clinical, setClinical] = useState<Record<string, string>>({ polar: '', icterus: '', edema: '', cyanosis: '', clubbing: '', lymph_nodes: '', chest: '', cvs: '', others: '' });
 
   // Prescription builder state
   const [prescriptionList, setPrescriptionList] = useState<PrescriptionItem[]>([]);
+  const [generalAdvice, setGeneralAdvice] = useState('');
+  const [dietAdvice, setDietAdvice] = useState('');
+  const [followUpDate, setFollowUpDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Add Medicine Modal State
+  // Modals state
   const [isAddMedModalOpen, setIsAddMedModalOpen] = useState(false);
   const [selectedMed, setSelectedMed] = useState<Medicine | null>(null);
   const [medDose, setMedDose] = useState('1 Tablet');
   const [medFreq, setMedFreq] = useState('1-0-1 (After Food)');
   const [medDuration, setMedDuration] = useState('5 Days');
 
+  // New templates & preview modals
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isBrandingModalOpen, setIsBrandingModalOpen] = useState(false);
+
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-calculate BMI whenever Weight or Height changes
+  // Auto-calculate BMI
   useEffect(() => {
     const w = parseFloat(vitals.Weight);
     const hCm = parseFloat(vitals.Height);
@@ -90,13 +105,40 @@ export const PrescriptionsScreen: React.FC = () => {
     }
   }, [vitals.Weight, vitals.Height]);
 
-  // Determine if selected patient is male (hide ObGyn tab)
-  const selectedAppt = appointments.find(a => a._id === selectedApptId);
+  const selectedAppt = appointments.find(a => a._id === selectedApptId) || null;
   const isMale = selectedAppt?.patientGender?.toLowerCase() === 'male' || selectedAppt?.gender?.toLowerCase() === 'male';
+
+  // Populate existing prescription results when appointment is selected
+  useEffect(() => {
+    if (!selectedApptId || appointments.length === 0) return;
+    const appt = appointments.find(a => a._id === selectedApptId);
+    if (appt?.result && appt.result.length > 0) {
+      const res = appt.result[0];
+      if (res.diagnosys) setVitals(prev => ({ ...prev, ...(res.diagnosys as any) }));
+      if (res.clinical_findings) setClinical(prev => ({ ...prev, ...(res.clinical_findings as any) }));
+      if (res.advice) {
+        if (typeof res.advice === 'string') setGeneralAdvice(res.advice);
+        else if (res.advice.medication || res.advice.diet) {
+          setGeneralAdvice(res.advice.medication || '');
+          setDietAdvice(res.advice.diet || '');
+        }
+      }
+      if (res.followUp) setFollowUpDate(res.followUp);
+      if (res.medicineAdvice && res.medicineAdvice.length > 0) {
+        setPrescriptionList(res.medicineAdvice.map(m => ({
+          name: m.name || '',
+          dosage: m.dose || '1 Tab',
+          frequency: m.frequency || '1-0-1',
+          duration: m.duration || '5 Days',
+          instructions: m.notes,
+        })));
+      }
+    }
+  }, [selectedApptId, appointments]);
 
   const handleSavePrescription = useCallback(async (isAutoSave = false) => {
     if (!selectedApptId) {
-      if (!isAutoSave) Alert.alert('Validation', 'Please select an appointment to save the prescription to.');
+      if (!isAutoSave) Alert.alert('Validation', 'Please select an appointment first.');
       return;
     }
     if (!isAutoSave) setIsSubmitting(true);
@@ -112,40 +154,39 @@ export const PrescriptionsScreen: React.FC = () => {
           POG: obgyn.POG,
           LCB: obgyn.LCB,
           MOD: obgyn.MOD,
+          advice: {
+            medication: generalAdvice,
+            diet: dietAdvice,
+          },
+          followUp: followUpDate,
           medicineAdvice: prescriptionList.map(m => ({
             name: m.name,
             dose: m.dosage,
             frequency: m.frequency,
             duration: m.duration,
+            notes: m.instructions,
           }))
         }]
       };
       await appointmentsApi.update(selectedApptId, payload);
       if (!isAutoSave) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Success', 'Prescription saved to appointment!');
-        setPrescriptionList([]);
-        setVitals({ BP: '', PR: '', SPO2: '', Temp: '', Height: '', Weight: '', BMI: '', Others: '' });
-        setObgyn({ Gravida: '', Parity: '', LMP: '', EDD: '', POG: '', LCB: '', MOD: '' });
-        setClinical({ polar: '', icterus: '', edema: '', cyanosis: '', clubbing: '', lymph_nodes: '', chest: '', cvs: '', others: '' });
       }
-      // Auto-save is silent — no console.log in production
     } catch (e: any) {
       if (!isAutoSave) Alert.alert('Error', e?.response?.data?.message || 'Failed to save prescription.');
     } finally {
       if (!isAutoSave) setIsSubmitting(false);
     }
-  }, [selectedApptId, vitals, clinical, obgyn, prescriptionList]);
+  }, [selectedApptId, vitals, clinical, obgyn, prescriptionList, generalAdvice, dietAdvice, followUpDate]);
 
-  // Auto-save after 30s of inactivity when an appointment is selected
+  // Auto-save after 30s of inactivity
   useEffect(() => {
     if (!selectedApptId) return;
-
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-
     autoSaveTimer.current = setTimeout(() => {
       handleSavePrescription(true);
     }, 30000);
-
     return () => {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     };
@@ -160,7 +201,7 @@ export const PrescriptionsScreen: React.FC = () => {
       setMedicines(Array.isArray(resMeds?.medicines) ? resMeds.medicines : []);
       setAppointments(Array.isArray(resAppts) ? resAppts : []);
     } catch (e: any) {
-      Alert.alert('Error', e?.response?.data?.message || 'Failed to load data.');
+      Alert.alert('Notice', e?.response?.data?.message || 'Failed to load data.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -176,7 +217,6 @@ export const PrescriptionsScreen: React.FC = () => {
     fetchData();
   }, []);
 
-  // When navigated with an appointmentId param, pre-select it once data loads
   useEffect(() => {
     if (route?.params?.appointmentId && appointments.length > 0) {
       setSelectedApptId(route.params.appointmentId);
@@ -195,8 +235,37 @@ export const PrescriptionsScreen: React.FC = () => {
         : await prescriptionsApi.searchByComposition(query);
       setMedicines(Array.isArray(results) ? results : []);
     } catch (e: any) {
-      // silently fail — previous results remain visible
+      // silently fail
     }
+  };
+
+  const handleApplyTemplate = (tmpl: PrescriptionTemplate) => {
+    if (tmpl.vitals) {
+      setVitals(prev => ({ ...prev, ...tmpl.vitals }));
+    }
+    if (tmpl.clinicalFindings) {
+      setClinical(prev => ({ ...prev, ...tmpl.clinicalFindings }));
+    }
+    if (tmpl.medicines && tmpl.medicines.length > 0) {
+      setPrescriptionList(prev => [
+        ...prev,
+        ...tmpl.medicines.map(m => ({
+          name: m.name || '',
+          dosage: m.dose || '1 Tab',
+          frequency: m.frequency || '1-0-1',
+          duration: m.duration || '5 Days',
+          instructions: m.notes,
+        })),
+      ]);
+    }
+    if (tmpl.advice) setGeneralAdvice(tmpl.advice);
+    if (tmpl.diet) setDietAdvice(tmpl.diet);
+    if (tmpl.followUpDays) {
+      const d = new Date();
+      d.setDate(d.getDate() + tmpl.followUpDays);
+      setFollowUpDate(d.toLocaleDateString('en-GB'));
+    }
+    Alert.alert('Template Applied', `"${tmpl.name}" preset applied to prescription.`);
   };
 
   const handleOpenAddMedModal = (med: Medicine) => {
@@ -226,21 +295,57 @@ export const PrescriptionsScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Appointment Selector */}
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Select Appointment:</Text>
-        <View style={styles.pickerContainer}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Appointment Selector & Quick Action Bar */}
+      <View style={[styles.header, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+        <View style={styles.headerTopRow}>
+          <Text style={[styles.headerText, { color: colors.textPrimary }]}>Select Appointment:</Text>
+          <View style={styles.topActionBtns}>
+            <TouchableOpacity
+              style={[styles.miniBtn, { backgroundColor: colors.goldSoft, borderColor: colors.goldBorder }]}
+              onPress={() => setIsTemplateModalOpen(true)}
+            >
+              <Ionicons name="copy-outline" size={13} color={colors.goldDark} />
+              <Text style={[styles.miniBtnText, { color: colors.goldDark }]}>Templates</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.miniBtn, { backgroundColor: colors.primarySoft, borderColor: colors.primaryMuted }]}
+              onPress={() => {
+                if (!selectedApptId) {
+                  Alert.alert('Notice', 'Please select an appointment first to preview prescription.');
+                  return;
+                }
+                setIsPreviewModalOpen(true);
+              }}
+            >
+              <Ionicons name="eye-outline" size={13} color={colors.primary} />
+              <Text style={[styles.miniBtnText, { color: colors.primary }]}>Preview</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.iconOnlyBtn, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+              onPress={() => setIsBrandingModalOpen(true)}
+            >
+              <Ionicons name="settings-outline" size={15} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={[styles.pickerContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}>
           <Picker
             selectedValue={selectedApptId}
             onValueChange={(itemValue) => setSelectedApptId(itemValue)}
+            dropdownIconColor={colors.goldDark}
+            style={{ color: colors.textPrimary }}
           >
-            <Picker.Item label="-- Select an Appointment --" value="" />
+            <Picker.Item label="-- Choose Patient Appointment --" value="" color={colors.textMuted} />
             {appointments.map(a => (
               <Picker.Item
                 key={a._id}
                 label={`${a.name || a.patientName || 'Unknown'} (${a.appointmentDate || ''})`}
                 value={a._id}
+                color={colors.textPrimary}
               />
             ))}
           </Picker>
@@ -248,12 +353,19 @@ export const PrescriptionsScreen: React.FC = () => {
       </View>
 
       {/* Tab Bar */}
-      <View style={styles.tabBar}>
+      <View style={[styles.tabBar, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
         {(['Vitals', 'ObGyn', 'Clinical', 'Medicines'] as const).map(tab => {
-          if (tab === 'ObGyn' && isMale) return null; // Hide ObGyn tab for males
+          if (tab === 'ObGyn' && isMale) return null;
+          const isActive = activeTab === tab;
           return (
-            <TouchableOpacity key={tab} style={[styles.tab, activeTab === tab && styles.tabActive]} onPress={() => setActiveTab(tab)}>
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, isActive && { backgroundColor: colors.primary }]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text style={[styles.tabText, { color: colors.textSecondary }, isActive && { color: colors.textWhite, fontWeight: '700' }]}>
+                {tab}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -262,7 +374,7 @@ export const PrescriptionsScreen: React.FC = () => {
       {/* Content */}
       <ScrollView
         style={styles.content}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} colors={[colors.primary, colors.gold]} />}
       >
         {/* Vitals Tab */}
         {activeTab === 'Vitals' && (
@@ -272,10 +384,10 @@ export const PrescriptionsScreen: React.FC = () => {
               const warning = getVitalWarning(k, vitals[k]);
               const isBMI = k === 'BMI';
               return (
-                <View key={k} style={styles.gridItem}>
+                <View key={k} style={[styles.gridItem, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
                   <View style={styles.labelRow}>
-                    <Text style={styles.label}>{cfg?.label || k}</Text>
-                    {cfg?.unit && <Text style={styles.unitText}>{cfg.unit}</Text>}
+                    <Text style={[styles.label, { color: colors.textPrimary }]}>{cfg?.label || k}</Text>
+                    {cfg?.unit && <Text style={[styles.unitText, { color: colors.textMuted }]}>{cfg.unit}</Text>}
                   </View>
                   {warning && (
                     <Text style={[styles.warningText, warning.startsWith('High') ? styles.warningHigh : warning.startsWith('Low') ? styles.warningLow : styles.warningInfo]}>
@@ -283,9 +395,9 @@ export const PrescriptionsScreen: React.FC = () => {
                     </Text>
                   )}
                   <TextInput
-                    style={[styles.input, isBMI && styles.inputDisabled]}
+                    style={[styles.input, { backgroundColor: colors.surfaceElevated, borderColor: colors.borderLight, color: colors.textPrimary }, isBMI && styles.inputDisabled]}
                     placeholder={cfg?.placeholder || `Enter ${k}`}
-                    placeholderTextColor="#94a3b8"
+                    placeholderTextColor={colors.textMuted}
                     value={vitals[k]}
                     onChangeText={(val) => setVitals(prev => ({ ...prev, [k]: val }))}
                     editable={!isBMI}
@@ -299,16 +411,16 @@ export const PrescriptionsScreen: React.FC = () => {
 
         {/* ObGyn Tab */}
         {activeTab === 'ObGyn' && (
-          <View style={styles.formSection}>
-            {(Object.keys(obgyn) as Array<keyof typeof obgyn>).map((key) => (
-              <View key={key} style={styles.fieldGroup}>
-                <Text style={styles.label}>{key}</Text>
+          <View style={[styles.formSection, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+            {(Object.keys(obgyn) as Array<keyof typeof obgyn>).map((k) => (
+              <View key={k} style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.textPrimary }]}>{k}</Text>
                 <TextInput
-                  style={styles.input}
-                  placeholder={`Enter ${key}`}
-                  placeholderTextColor="#94a3b8"
-                  value={obgyn[key]}
-                  onChangeText={(val) => setObgyn(prev => ({ ...prev, [key]: val }))}
+                  style={[styles.input, { backgroundColor: colors.surfaceElevated, borderColor: colors.borderLight, color: colors.textPrimary }]}
+                  placeholder={`Enter ${k}`}
+                  placeholderTextColor={colors.textMuted}
+                  value={obgyn[k]}
+                  onChangeText={(val) => setObgyn(prev => ({ ...prev, [k]: val }))}
                 />
               </View>
             ))}
@@ -317,16 +429,16 @@ export const PrescriptionsScreen: React.FC = () => {
 
         {/* Clinical Findings Tab */}
         {activeTab === 'Clinical' && (
-          <View style={styles.formSection}>
-            {(Object.keys(clinical) as Array<keyof typeof clinical>).map((key) => (
-              <View key={key} style={styles.fieldGroup}>
-                <Text style={styles.label}>{key.replace(/_/g, ' ').toUpperCase()}</Text>
+          <View style={[styles.formSection, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
+            {(Object.keys(clinical) as Array<keyof typeof clinical>).map((k) => (
+              <View key={k} style={styles.fieldGroup}>
+                <Text style={[styles.label, { color: colors.textPrimary }]}>{k.replace('_', ' ').toUpperCase()}</Text>
                 <TextInput
-                  style={styles.input}
-                  placeholder={`Enter ${key.replace(/_/g, ' ')}`}
-                  placeholderTextColor="#94a3b8"
-                  value={clinical[key]}
-                  onChangeText={(val) => setClinical(prev => ({ ...prev, [key]: val }))}
+                  style={[styles.input, { backgroundColor: colors.surfaceElevated, borderColor: colors.borderLight, color: colors.textPrimary }]}
+                  placeholder={`Enter ${k.replace('_', ' ')} findings`}
+                  placeholderTextColor={colors.textMuted}
+                  value={clinical[k]}
+                  onChangeText={(val) => setClinical(prev => ({ ...prev, [k]: val }))}
                 />
               </View>
             ))}
@@ -336,54 +448,85 @@ export const PrescriptionsScreen: React.FC = () => {
         {/* Medicines Tab */}
         {activeTab === 'Medicines' && (
           <View>
-            {/* Search Bar */}
-            <View style={styles.searchBox}>
-              <View style={styles.tabRow}>
-                <TouchableOpacity style={[styles.searchTab, searchType === 'name' && styles.searchTabActive]} onPress={() => setSearchType('name')}>
-                  <Text style={[styles.searchTabText, searchType === 'name' && styles.searchTabTextActive]}>By Brand Name</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.searchTab, searchType === 'composition' && styles.searchTabActive]} onPress={() => setSearchType('composition')}>
-                  <Text style={[styles.searchTabText, searchType === 'composition' && styles.searchTabTextActive]}>By Composition</Text>
-                </TouchableOpacity>
-              </View>
-              <TextInput style={styles.searchInput} placeholder={`Search by ${searchType}...`} value={searchQuery} onChangeText={handleSearch} />
-            </View>
-
-            {/* Draft Prescription */}
+            {/* Draft Prescription Items */}
             {prescriptionList.length > 0 && (
-              <View style={styles.draftCard}>
+              <View style={[styles.draftCard, { backgroundColor: colors.primarySoft, borderColor: colors.primaryMuted }]}>
                 <View style={styles.draftHeader}>
-                  <Text style={styles.draftTitle}>📝 Draft ({prescriptionList.length})</Text>
-                  <TouchableOpacity onPress={() => setPrescriptionList([])}><Text style={styles.clearText}>Clear All</Text></TouchableOpacity>
+                  <Text style={[styles.draftTitle, { color: colors.primary }]}>Prescribed Items ({prescriptionList.length})</Text>
+                  <TouchableOpacity onPress={() => setPrescriptionList([])}>
+                    <Text style={styles.clearText}>Clear All</Text>
+                  </TouchableOpacity>
                 </View>
                 {prescriptionList.map((item, idx) => (
-                  <View key={idx} style={styles.draftItem}>
+                  <View key={idx} style={[styles.draftItem, { backgroundColor: colors.cardBg, borderColor: colors.borderLight }]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.draftItemName}>{item.name}</Text>
-                      <Text style={styles.draftItemDetails}>{item.dosage} • {item.frequency} • {item.duration}</Text>
+                      <Text style={[styles.draftItemName, { color: colors.textPrimary }]}>{item.name}</Text>
+                      <Text style={[styles.draftItemDetails, { color: colors.textSecondary }]}>
+                        {item.dosage} • {item.frequency} • {item.duration}
+                      </Text>
                     </View>
-                    <TouchableOpacity onPress={() => handleRemovePrescriptionItem(idx)}><Text style={styles.removeText}>✕</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleRemovePrescriptionItem(idx)}>
+                      <Ionicons name="trash-outline" size={16} color="#dc2626" />
+                    </TouchableOpacity>
                   </View>
                 ))}
               </View>
             )}
 
-            {/* Medicine List */}
-            {isLoading ? (
-              <ActivityIndicator size="large" color="#0284c7" style={{ marginTop: 40 }} />
-            ) : medicines.length === 0 ? (
+            {/* Medicine Store Search */}
+            <View style={styles.searchBox}>
+              <View style={[styles.tabRow, { backgroundColor: colors.surfaceElevated }]}>
+                <TouchableOpacity
+                  style={[styles.searchTab, searchType === 'name' && { backgroundColor: colors.cardBg }]}
+                  onPress={() => setSearchType('name')}
+                >
+                  <Text style={[styles.searchTabText, { color: colors.textSecondary }, searchType === 'name' && { color: colors.primary, fontWeight: '700' }]}>
+                    By Name
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.searchTab, searchType === 'composition' && { backgroundColor: colors.cardBg }]}
+                  onPress={() => setSearchType('composition')}
+                >
+                  <Text style={[styles.searchTabText, { color: colors.textSecondary }, searchType === 'composition' && { color: colors.primary, fontWeight: '700' }]}>
+                    By Composition
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <TextInput
+                style={[styles.searchInput, { backgroundColor: colors.cardBg, borderColor: colors.border, color: colors.textPrimary }]}
+                placeholder={`Search medicines by ${searchType}...`}
+                placeholderTextColor={colors.textMuted}
+                value={searchQuery}
+                onChangeText={handleSearch}
+              />
+            </View>
+
+            {/* Medicine Inventory Results */}
+            {medicines.length === 0 ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No medicines found</Text>
+                <Ionicons name="medkit-outline" size={36} color={colors.goldMuted} />
+                <Text style={[styles.emptyStateText, { color: colors.textMuted }]}>No medicines found</Text>
               </View>
             ) : (
-              medicines.map(item => (
-                <View key={item._id} style={styles.medicineCard}>
+              medicines.map((med) => (
+                <View key={med._id} style={[styles.medicineCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.medicineName}>{item.name}</Text>
-                    {item.composition && <Text style={styles.compositionText}>🧪 {item.composition}</Text>}
+                    <Text style={[styles.medicineName, { color: colors.textPrimary }]}>{med.name}</Text>
+                    {med.genericName ? (
+                      <Text style={[styles.compositionText, { color: colors.primary }]}>{med.genericName}</Text>
+                    ) : null}
+                    <Text style={[styles.metaText, { color: colors.textMuted }]}>
+                      {med.dosageForm || 'Form'} • ₹{med.unitPrice || 0}
+                    </Text>
                   </View>
-                  <TouchableOpacity style={styles.addPrescriptionBtn} onPress={() => handleOpenAddMedModal(item)}>
-                    <Text style={styles.addPrescriptionText}>+ Add Rx</Text>
+                  <TouchableOpacity
+                    style={[styles.addPrescriptionBtn, { backgroundColor: colors.goldSoft, borderColor: colors.goldBorder }]}
+                    onPress={() => handleOpenAddMedModal(med)}
+                  >
+                    <Ionicons name="add" size={16} color={colors.goldDark} />
+                    <Text style={[styles.addPrescriptionText, { color: colors.goldDark }]}>Add to Rx</Text>
                   </TouchableOpacity>
                 </View>
               ))
@@ -392,112 +535,212 @@ export const PrescriptionsScreen: React.FC = () => {
         )}
       </ScrollView>
 
-      {/* Save Button Footer */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveBtn} onPress={() => handleSavePrescription(false)} disabled={isSubmitting}>
-          {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>💾 Save Prescription</Text>}
-        </TouchableOpacity>
-        <Text style={styles.autoSaveHint}>Auto-saves 30s after changes</Text>
+      {/* Footer Action Bar */}
+      <View style={[styles.footer, { backgroundColor: colors.cardBg, borderTopColor: colors.border }]}>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <TouchableOpacity
+            style={[styles.previewFooterBtn, { backgroundColor: colors.primarySoft, borderColor: colors.primaryMuted }]}
+            onPress={() => {
+              if (!selectedApptId) {
+                Alert.alert('Notice', 'Please select an appointment first.');
+                return;
+              }
+              setIsPreviewModalOpen(true);
+            }}
+          >
+            <Ionicons name="print-outline" size={18} color={colors.primary} />
+            <Text style={[styles.previewFooterText, { color: colors.primary }]}>Preview & PDF</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.saveBtn, { backgroundColor: colors.gold }]}
+            onPress={() => handleSavePrescription(false)}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <>
+                <Ionicons name="save-outline" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+                <Text style={styles.saveBtnText}>Save Prescription</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+        <Text style={[styles.autoSaveHint, { color: colors.textMuted }]}>Auto-saves periodically when editing appointment</Text>
       </View>
 
-      {/* Add Medicine Dosage Modal */}
-      <Modal visible={isAddMedModalOpen} animationType="fade" transparent>
+      {/* Add Medicine Modal */}
+      <Modal visible={isAddMedModalOpen} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Set Dosage Details</Text>
-            <Text style={styles.modalSubtitle}>{selectedMed?.name}</Text>
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBg }]}>
+            <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>{selectedMed?.name}</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>Configure Dosage Instructions</Text>
 
-            <Text style={styles.modalLabel}>Dose</Text>
-            <TextInput style={styles.modalInput} value={medDose} onChangeText={setMedDose} placeholder="e.g. 1 Tablet" />
+            <Text style={[styles.modalLabel, { color: colors.textPrimary }]}>Dosage</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.textPrimary }]}
+              value={medDose}
+              onChangeText={setMedDose}
+              placeholder="e.g. 1 Tablet, 5ml"
+              placeholderTextColor={colors.textMuted}
+            />
 
-            <Text style={styles.modalLabel}>Frequency</Text>
-            <TextInput style={styles.modalInput} value={medFreq} onChangeText={setMedFreq} placeholder="e.g. 1-0-1 (After Food)" />
+            <Text style={[styles.modalLabel, { color: colors.textPrimary }]}>Frequency</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.textPrimary }]}
+              value={medFreq}
+              onChangeText={setMedFreq}
+              placeholder="e.g. 1-0-1 (After Food)"
+              placeholderTextColor={colors.textMuted}
+            />
 
-            <Text style={styles.modalLabel}>Duration</Text>
-            <TextInput style={styles.modalInput} value={medDuration} onChangeText={setMedDuration} placeholder="e.g. 5 Days" />
+            <Text style={[styles.modalLabel, { color: colors.textPrimary }]}>Duration</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.textPrimary }]}
+              value={medDuration}
+              onChangeText={setMedDuration}
+              placeholder="e.g. 5 Days, 1 Month"
+              placeholderTextColor={colors.textMuted}
+            />
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnCancel]} onPress={() => setIsAddMedModalOpen(false)}>
-                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+              <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setIsAddMedModalOpen(false)}>
+                <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtn, styles.modalBtnConfirm]} onPress={handleConfirmAddMed}>
-                <Text style={styles.modalBtnConfirmText}>Add to Draft</Text>
+              <TouchableOpacity style={[styles.modalBtnConfirm, { backgroundColor: colors.primary }]} onPress={handleConfirmAddMed}>
+                <Text style={{ color: '#ffffff', fontWeight: '700' }}>Add to Rx</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
+      {/* Prescription Templates Modal */}
+      <PrescriptionTemplateModal
+        visible={isTemplateModalOpen}
+        onClose={() => setIsTemplateModalOpen(false)}
+        onApplyTemplate={handleApplyTemplate}
+        currentVitals={vitals}
+        currentClinical={clinical}
+        currentMedicines={prescriptionList}
+      />
+
+      {/* Prescription Preview & PDF Download Modal */}
+      <PrescriptionPreviewModal
+        visible={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        appointment={selectedAppt}
+        doctorName={selectedAppt?.doctorName || 'Dr. Consultant'}
+        doctorSpecialization={selectedAppt?.department || 'General Medicine'}
+        vitals={vitals}
+        clinicalFindings={clinical}
+        medicines={prescriptionList}
+        advice={generalAdvice}
+        diet={dietAdvice}
+        followUp={followUpDate}
+      />
+
+      {/* Branding Settings Modal */}
+      <PrescriptionSettingsModal
+        visible={isBrandingModalOpen}
+        onClose={() => setIsBrandingModalOpen(false)}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { padding: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#e2e8f0' },
-  headerText: { fontSize: 14, fontWeight: '600', color: '#334155', marginBottom: 8 },
-  pickerContainer: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, overflow: 'hidden', backgroundColor: '#f8fafc' },
-  tabBar: { flexDirection: 'row', backgroundColor: '#fff', paddingHorizontal: 8, paddingVertical: 6, borderBottomWidth: 1, borderColor: '#e2e8f0' },
+  container: { flex: 1 },
+  header: { padding: 12, borderBottomWidth: 1 },
+  headerTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  headerText: { fontSize: 13, fontWeight: '700' },
+  topActionBtns: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  miniBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    gap: 4,
+  },
+  miniBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  iconOnlyBtn: {
+    padding: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  pickerContainer: { borderWidth: 1, borderRadius: 8, overflow: 'hidden' },
+  tabBar: { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 6, borderBottomWidth: 1 },
   tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8, marginHorizontal: 2 },
-  tabActive: { backgroundColor: '#e0f2fe' },
-  tabText: { fontSize: 12, color: '#64748b', fontWeight: '500' },
-  tabTextActive: { color: '#0284c7', fontWeight: '700' },
+  tabText: { fontSize: 12, fontWeight: '600' },
   content: { flex: 1, padding: 12 },
-  // Vitals Grid
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  gridItem: { width: '48%', backgroundColor: '#fff', padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0' },
+  gridItem: { width: '48%', padding: 10, borderRadius: 10, borderWidth: 1 },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
-  label: { fontSize: 12, fontWeight: '600', color: '#475569' },
-  unitText: { fontSize: 10, color: '#94a3b8' },
+  label: { fontSize: 12, fontWeight: '700' },
+  unitText: { fontSize: 10 },
   warningText: { fontSize: 10, marginBottom: 4, fontWeight: '600' },
   warningHigh: { color: '#dc2626' },
   warningLow: { color: '#d97706' },
   warningInfo: { color: '#7c3aed' },
-  // Form
-  formSection: { gap: 10 },
-  fieldGroup: { marginBottom: 8 },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, padding: 10, fontSize: 14, color: '#1e293b' },
-  inputDisabled: { backgroundColor: '#f1f5f9', color: '#94a3b8' },
-  // Medicines
+  formSection: { padding: 14, borderRadius: 12, borderWidth: 1, gap: 10 },
+  fieldGroup: { marginBottom: 6 },
+  input: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 14 },
+  inputDisabled: { opacity: 0.6 },
   searchBox: { marginBottom: 12 },
-  tabRow: { flexDirection: 'row', backgroundColor: '#f1f5f9', borderRadius: 8, padding: 3, marginBottom: 8 },
+  tabRow: { flexDirection: 'row', borderRadius: 8, padding: 3, marginBottom: 8 },
   searchTab: { flex: 1, padding: 6, alignItems: 'center', borderRadius: 6 },
-  searchTabActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 },
-  searchTabText: { fontSize: 12, color: '#64748b' },
-  searchTabTextActive: { color: '#0284c7', fontWeight: 'bold' },
-  searchInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, padding: 10, fontSize: 14 },
-  emptyState: { padding: 40, alignItems: 'center' },
-  emptyStateText: { color: '#94a3b8', fontSize: 14 },
-  // Draft
-  draftCard: { backgroundColor: '#eff6ff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#bfdbfe', marginBottom: 12 },
-  draftHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  draftTitle: { fontSize: 14, fontWeight: '700', color: '#1e40af' },
-  clearText: { fontSize: 12, color: '#dc2626', fontWeight: '600' },
-  draftItem: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#fff', padding: 8, borderRadius: 6, marginBottom: 4 },
-  draftItemName: { fontSize: 13, fontWeight: '600', color: '#1e293b' },
-  draftItemDetails: { fontSize: 11, color: '#64748b' },
-  removeText: { color: '#ef4444', fontWeight: '700', fontSize: 18, paddingHorizontal: 4 },
-  // Medicine Card
-  medicineCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#e2e8f0' },
-  medicineName: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
-  compositionText: { fontSize: 12, color: '#0284c7', marginTop: 2 },
-  addPrescriptionBtn: { backgroundColor: '#f0f9ff', borderColor: '#0284c7', borderWidth: 1, padding: 10, borderRadius: 8 },
-  addPrescriptionText: { color: '#0284c7', fontWeight: '600', fontSize: 12 },
-  // Footer
-  footer: { padding: 12, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#e2e8f0' },
-  saveBtn: { backgroundColor: '#0284c7', padding: 14, borderRadius: 10, alignItems: 'center' },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  autoSaveHint: { textAlign: 'center', fontSize: 10, color: '#94a3b8', marginTop: 6 },
-  // Modal
+  searchTabText: { fontSize: 12 },
+  searchInput: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 14 },
+  emptyState: { padding: 40, alignItems: 'center', gap: 8 },
+  emptyStateText: { fontSize: 13 },
+  draftCard: { padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 12 },
+  draftHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  draftTitle: { fontSize: 13, fontWeight: '800' },
+  clearText: { fontSize: 11, color: '#dc2626', fontWeight: '700' },
+  draftItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 8, borderRadius: 6, borderWidth: 1, marginBottom: 6 },
+  draftItemName: { fontSize: 13, fontWeight: '700' },
+  draftItemDetails: { fontSize: 11, marginTop: 2 },
+  medicineCard: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 1 },
+  medicineName: { fontSize: 14, fontWeight: '700' },
+  compositionText: { fontSize: 11, marginTop: 2, fontWeight: '600' },
+  metaText: { fontSize: 10, marginTop: 2 },
+  addPrescriptionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, gap: 4 },
+  addPrescriptionText: { fontWeight: '700', fontSize: 11 },
+  footer: { padding: 12, borderTopWidth: 1 },
+  previewFooterBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 6,
+  },
+  previewFooterText: { fontSize: 13, fontWeight: '700' },
+  saveBtn: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  saveBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+  autoSaveHint: { textAlign: 'center', fontSize: 10, marginTop: 6 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: '#fff', padding: 20, borderRadius: 16 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginBottom: 4 },
-  modalSubtitle: { fontSize: 14, color: '#64748b', marginBottom: 12 },
-  modalLabel: { fontSize: 12, fontWeight: '600', color: '#475569', marginTop: 8, marginBottom: 4 },
-  modalInput: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 8, padding: 10, fontSize: 14 },
+  modalContent: { padding: 20, borderRadius: 16 },
+  modalTitle: { fontSize: 16, fontWeight: '800', marginBottom: 2 },
+  modalSubtitle: { fontSize: 12, marginBottom: 12 },
+  modalLabel: { fontSize: 12, fontWeight: '700', marginTop: 8, marginBottom: 4 },
+  modalInput: { borderWidth: 1, borderRadius: 8, padding: 10, fontSize: 14 },
   modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 },
-  modalBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
-  modalBtnCancel: { backgroundColor: '#f1f5f9' },
-  modalBtnCancelText: { color: '#475569', fontWeight: '600' },
-  modalBtnConfirm: { backgroundColor: '#0284c7' },
-  modalBtnConfirmText: { color: '#fff', fontWeight: '600' },
+  modalBtnCancel: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
+  modalBtnConfirm: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
 });

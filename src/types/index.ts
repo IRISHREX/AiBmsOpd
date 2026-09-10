@@ -170,17 +170,19 @@ export interface PrescriptionItem {
 export interface Invoice {
   _id: string;
   invoiceNumber?: string;
-  appointment?: string;
+  appointment?: any;
   patient?: any;
   doctor?: any;
   items?: { description: string; quantity: number; unitPrice: number; total: number }[];
+  subtotal?: number;
   tax?: number;
   discount?: number;
+  total?: number;
   totalAmount?: number;
   payableAmount?: number;
   paidAmount?: number;
-  payments?: { amount: number; method: string; date?: string; transactionId?: string }[];
-  status: 'Pending' | 'Paid' | 'Partially Paid' | 'Cancelled';
+  payments?: { amount: number; method: string; date?: string; paidAt?: string; reference?: string; transactionId?: string }[];
+  status: 'Unpaid' | 'Paid' | 'Partial' | 'Cancelled' | 'Pending' | 'Partially Paid';
   issuedAt?: string;
   dueDate?: string;
   createdAt?: string;

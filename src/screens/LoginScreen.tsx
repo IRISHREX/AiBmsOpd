@@ -13,6 +13,9 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
+import { colors } from '../theme/colors';
+import { Ionicons } from '@expo/vector-icons';
+import { interactionUtils } from '../utils/interactionUtils';
 
 export const LoginScreen: React.FC = () => {
   const { login, backendUrl, setCustomBackendUrl } = useAuth();
@@ -140,11 +143,17 @@ export const LoginScreen: React.FC = () => {
           {/* Backend URL configuration drawer / toggle */}
           <TouchableOpacity
             style={styles.configToggle}
-            onPress={() => setShowConfig(!showConfig)}
+            onPress={() => {
+              interactionUtils.playClick();
+              setShowConfig(!showConfig);
+            }}
           >
-            <Text style={styles.configToggleText}>
-              ⚙️ Server Endpoint: {backendUrl}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Ionicons name="server-outline" size={13} color={colors.primary} />
+              <Text style={styles.configToggleText}>
+                API Endpoint: {backendUrl}
+              </Text>
+            </View>
           </TouchableOpacity>
 
           {showConfig && (
@@ -190,20 +199,22 @@ const styles = StyleSheet.create({
   logoBadge: {
     width: 64,
     height: 64,
-    borderRadius: 16,
-    backgroundColor: '#0284c7',
+    borderRadius: 18,
+    backgroundColor: colors.primaryDark,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    shadowColor: '#0284c7',
+    borderWidth: 2,
+    borderColor: colors.gold,
+    shadowColor: colors.primaryDark,
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 4,
   },
   logoText: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontWeight: '800',
+    color: colors.goldBright,
     letterSpacing: 1,
   },
   title: {
@@ -259,8 +270,8 @@ const styles = StyleSheet.create({
     color: '#64748b',
   },
   roleTabTextActive: {
-    color: '#0284c7',
-    fontWeight: '600',
+    color: colors.primary,
+    fontWeight: '700',
   },
   errorBox: {
     backgroundColor: '#fef2f2',
@@ -294,11 +305,16 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   button: {
-    backgroundColor: '#0284c7',
+    backgroundColor: colors.primary,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   buttonDisabled: {
     opacity: 0.7,
