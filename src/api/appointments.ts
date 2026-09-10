@@ -2,17 +2,31 @@ import apiClient from './client';
 import { Appointment } from '../types';
 
 export interface CreateAppointmentPayload {
-  patientName: string;
-  patientPhone: string;
+  name?: string;
+  patientName?: string;
+  phone?: string;
+  patientPhone?: string;
+  age?: number;
   patientAge?: number;
+  nic?: string;
+  dob?: string;
+  gender?: string;
   patientGender?: string;
+  address?: string;
   patientAddress?: string;
+  profession?: string;
+  department?: string;
   doctorId: string;
-  appointmentDate: string;
+  appointmentDate?: string;
+  appointment_date?: string;
   slotTime?: string;
+  hasVisited?: boolean;
+  price?: number;
+  paymentStatus?: string;
   symptoms?: string[];
   notes?: string;
   download?: boolean;
+  result?: any;
 }
 
 export const appointmentsApi = {
@@ -47,7 +61,13 @@ export const appointmentsApi = {
   },
 
   reschedule: async (appointmentId: string, payload: { appointmentDate: string; slotTime?: string }) => {
-    const response = await apiClient.put(`/api/v1/appointment/reschedule/${appointmentId}`, payload);
+    // Backend doesn't have a specific /reschedule route; it uses the /status/:id PUT route for status updates.
+    // However, the /status/:id endpoint calls `updateAppointmentStatus` which updates all harmonized fields.
+    const updatePayload = {
+      appointment_date: payload.appointmentDate,
+      // Pass other fields if necessary
+    };
+    const response = await apiClient.put(`/api/v1/appointment/status/${appointmentId}`, updatePayload);
     return response.data;
   },
 

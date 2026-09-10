@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   View,
   Text,
@@ -12,6 +13,8 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  ScrollView,
+  KeyboardAvoidingView,
 } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -21,6 +24,10 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 import { doctorsApi } from '../api/doctors';
 import { Doctor, CapacitySlot } from '../types';
 import { interactionUtils } from '../utils/interactionUtils';
+import { ageToDob } from '../utils/ageUtils';
+import { makeNIC } from '../utils/nicMaker';
+import { DropdownPicker } from '../components/DropdownPicker';
+import { GENDERS, DEPARTMENTS } from '../utils/constants';
 
 export const DoctorsScreen: React.FC = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -32,6 +39,7 @@ export const DoctorsScreen: React.FC = () => {
   const [capacityDate, setCapacityDate] = useState<string>(
     new Date().toISOString().split('T')[0]
   );
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [capacityData, setCapacityData] = useState<CapacitySlot | null>(null);
   const [isLoadingCapacity, setIsLoadingCapacity] = useState(false);
 
@@ -40,8 +48,14 @@ export const DoctorsScreen: React.FC = () => {
   const [docName, setDocName] = useState('');
   const [docEmail, setDocEmail] = useState('');
   const [docPhone, setDocPhone] = useState('');
+  const [docAge, setDocAge] = useState('');
+  const [docGender, setDocGender] = useState('Male');
   const [docSpecialty, setDocSpecialty] = useState('');
+  const [docDepartment, setDocDepartment] = useState('');
+  const [docQualifications, setDocQualifications] = useState('');
   const [docFee, setDocFee] = useState('500');
+  const [docCompounder, setDocCompounder] = useState('');
+  const [step, setStep] = useState(1);
 
   const fetchDoctors = async () => {
     try {
@@ -83,18 +97,37 @@ export const DoctorsScreen: React.FC = () => {
     }
 
     try {
+      const calculatedNic = makeNIC(docPhone.trim(), docAge);
+      const calculatedDob = ageToDob(docAge);
+
       await doctorsApi.addNew({
+        firstName: docName.trim().split(' ')[0],
+        lastName: docName.trim().split(' ').slice(1).join(' '),
         name: docName.trim(),
         email: docEmail.trim(),
         phone: docPhone.trim(),
+        age: docAge ? parseInt(docAge, 10) : undefined,
+        gender: docGender,
+        nic: calculatedNic,
+        dob: calculatedDob,
         specialization: docSpecialty.trim(),
+        doctorDepartment: docDepartment.trim(),
+        department: docDepartment.trim(),
+        qualifications: docQualifications.trim(),
+        consultationFee: parseFloat(docFee) || 500,
         visitingFee: parseFloat(docFee) || 500,
+        role: 'doctor',
       });
       setIsAddDoctorOpen(false);
       setDocName('');
       setDocEmail('');
       setDocPhone('');
+      setDocAge('');
+      setDocGender('Male');
       setDocSpecialty('');
+      setDocDepartment('');
+      setDocQualifications('');
+      setDocFee('500');
       
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       interactionUtils.playSuccess();
@@ -136,13 +169,29 @@ export const DoctorsScreen: React.FC = () => {
       <View style={styles.capacitySection}>
         <Text style={styles.capacityTitle}>⚡ Quick Capacity Checker</Text>
         <View style={styles.capacityInputs}>
-          <TextInput
-            style={styles.dateInput}
-            value={capacityDate}
-            onChangeText={setCapacityDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#94a3b8"
-          />
+          <TouchableOpacity
+            style={[styles.dateInput, { justifyContent: 'center' }]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={{ color: capacityDate ? '#0f172a' : '#94a3b8' }}>
+              {capacityDate || 'YYYY-MM-DD'}
+            </Text>
+          </TouchableOpacity>
+          
+          {showDatePicker && (
+            <DateTimePicker
+              value={capacityDate ? new Date(capacityDate) : new Date()}
+              mode="date"
+              display="default"
+              onChange={(event, date) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (date) {
+                  setCapacityDate(date.toISOString().split('T')[0]);
+                }
+              }}
+            />
+          )}
+
           <TouchableOpacity
             style={styles.checkBtn}
             onPress={() => selectedDocId && handleCheckCapacity(selectedDocId, capacityDate)}
@@ -210,66 +259,59 @@ export const DoctorsScreen: React.FC = () => {
 
       {/* Add Doctor Modal */}
       <Modal visible={isAddDoctorOpen} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView 
+          style={styles.modalOverlay} 
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add New Doctor</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.modalTitle}>Add New Doctor (Step {step}/2)</Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Dr. Full Name"
-              placeholderTextColor="#94a3b8"
-              value={docName}
-              onChangeText={setDocName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Specialization (e.g., Cardiologist)"
-              placeholderTextColor="#94a3b8"
-              value={docSpecialty}
-              onChangeText={setDocSpecialty}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Email Address"
-              placeholderTextColor="#94a3b8"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={docEmail}
-              onChangeText={setDocEmail}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Phone Number"
-              placeholderTextColor="#94a3b8"
-              keyboardType="phone-pad"
-              value={docPhone}
-              onChangeText={setDocPhone}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Consultation Fee (₹)"
-              placeholderTextColor="#94a3b8"
-              keyboardType="numeric"
-              value={docFee}
-              onChangeText={setDocFee}
-            />
+              {step === 1 ? (
+                <>
+                  <TextInput style={styles.input} placeholder="Dr. Full Name" placeholderTextColor="#94a3b8" value={docName} onChangeText={setDocName} />
+                  <TextInput style={styles.input} placeholder="Email Address" placeholderTextColor="#94a3b8" keyboardType="email-address" autoCapitalize="none" value={docEmail} onChangeText={setDocEmail} />
+                  <TextInput style={styles.input} placeholder="Phone Number" placeholderTextColor="#94a3b8" keyboardType="phone-pad" value={docPhone} onChangeText={setDocPhone} />
+                  
+                  <View style={{ flexDirection: 'row', gap: 10, zIndex: 10 }}>
+                    <TextInput style={[styles.input, { flex: 1 }]} placeholder="Age" placeholderTextColor="#94a3b8" keyboardType="numeric" value={docAge} onChangeText={setDocAge} />
+                    <View style={{ flex: 1 }}>
+                      <DropdownPicker label="" placeholder="Gender" value={docGender} options={GENDERS} onSelect={setDocGender} />
+                    </View>
+                  </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.btn, styles.btnCancel]}
-                onPress={() => setIsAddDoctorOpen(false)}
-              >
-                <Text style={styles.btnCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.btn, styles.btnConfirm]}
-                onPress={handleAddDoctor}
-              >
-                <Text style={styles.btnConfirmText}>Save Doctor</Text>
-              </TouchableOpacity>
-            </View>
+                  <View style={styles.modalButtons}>
+                    <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={() => { setIsAddDoctorOpen(false); setStep(1); }}>
+                      <Text style={styles.btnCancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.btn, styles.btnConfirm]} onPress={() => setStep(2)}>
+                      <Text style={styles.btnConfirmText}>Next</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <TextInput style={styles.input} placeholder="Specialization (e.g., Cardiologist)" placeholderTextColor="#94a3b8" value={docSpecialty} onChangeText={setDocSpecialty} />
+                  <View style={{ zIndex: 9 }}>
+                    <DropdownPicker label="" placeholder="Department" value={docDepartment} options={DEPARTMENTS} onSelect={setDocDepartment} />
+                  </View>
+                  <TextInput style={styles.input} placeholder="Qualifications (e.g. MBBS, MD)" placeholderTextColor="#94a3b8" value={docQualifications} onChangeText={setDocQualifications} />
+                  <TextInput style={styles.input} placeholder="Consultation Fee (₹)" placeholderTextColor="#94a3b8" keyboardType="numeric" value={docFee} onChangeText={setDocFee} />
+                  <TextInput style={styles.input} placeholder="Assign Compounder (Name or ID)" placeholderTextColor="#94a3b8" value={docCompounder} onChangeText={setDocCompounder} />
+
+                  <View style={styles.modalButtons}>
+                    <TouchableOpacity style={[styles.btn, styles.btnCancel]} onPress={() => setStep(1)}>
+                      <Text style={styles.btnCancelText}>Back</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.btn, styles.btnConfirm]} onPress={handleAddDoctor}>
+                      <Text style={styles.btnConfirmText}>Add Doctor</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

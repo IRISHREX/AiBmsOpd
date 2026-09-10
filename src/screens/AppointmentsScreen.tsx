@@ -12,6 +12,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  RefreshControl,
 } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -22,6 +23,11 @@ import { appointmentsApi } from '../api/appointments';
 import { doctorsApi } from '../api/doctors';
 import { Appointment, Doctor } from '../types';
 import { interactionUtils } from '../utils/interactionUtils';
+import { ageToDob } from '../utils/ageUtils';
+import { makeNIC } from '../utils/nicMaker';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { DropdownPicker } from '../components/DropdownPicker';
+import { GENDERS, DEPARTMENTS } from '../utils/constants';
 
 export const AppointmentsScreen: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -36,16 +42,26 @@ export const AppointmentsScreen: React.FC = () => {
   const [newPatientName, setNewPatientName] = useState('');
   const [newPatientPhone, setNewPatientPhone] = useState('');
   const [newPatientAge, setNewPatientAge] = useState('');
+  const [newPatientGender, setNewPatientGender] = useState('Male');
+  const [newDepartment, setNewDepartment] = useState('Pediatrics');
+  const [newAddress, setNewAddress] = useState('');
+  const [newProfession, setNewProfession] = useState('');
+  const [newHasVisited, setNewHasVisited] = useState(false);
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
   const [newApptDate, setNewApptDate] = useState(new Date().toISOString().split('T')[0]);
   const [newSlotTime, setNewSlotTime] = useState('10:00 AM');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [newPrice, setNewPrice] = useState('');
   const [newSymptoms, setNewSymptoms] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [step, setStep] = useState(1);
 
   // Reschedule Modal State
   const [rescheduleModalAppt, setRescheduleModalAppt] = useState<Appointment | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState('');
   const [rescheduleSlot, setRescheduleSlot] = useState('');
+  const [showRescheduleDatePicker, setShowRescheduleDatePicker] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -66,6 +82,11 @@ export const AppointmentsScreen: React.FC = () => {
       setIsRefreshing(false);
     }
   };
+
+  const onRefresh = React.useCallback(() => {
+    setIsRefreshing(true);
+    fetchData();
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -131,12 +152,29 @@ export const AppointmentsScreen: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      const calculatedNic = makeNIC(newPatientPhone.trim(), newPatientAge);
+      const calculatedDob = ageToDob(newPatientAge);
+
       const created = await appointmentsApi.create({
         patientName: newPatientName.trim(),
+        name: newPatientName.trim(),
         patientPhone: newPatientPhone.trim(),
+        phone: newPatientPhone.trim(),
         patientAge: newPatientAge ? parseInt(newPatientAge, 10) : undefined,
+        age: newPatientAge ? parseInt(newPatientAge, 10) : undefined,
+        nic: calculatedNic,
+        dob: calculatedDob,
+        patientGender: newPatientGender,
+        gender: newPatientGender,
+        department: newDepartment,
+        patientAddress: newAddress.trim(),
+        address: newAddress.trim(),
+        profession: newProfession.trim(),
+        hasVisited: newHasVisited,
         doctorId: selectedDoctorId,
+        price: newPrice ? parseFloat(newPrice) : undefined,
         appointmentDate: newApptDate,
+        appointment_date: new Date(newApptDate).toISOString(),
         slotTime: newSlotTime,
         symptoms: newSymptoms ? newSymptoms.split(',').map((s) => s.trim()) : [],
       });
@@ -147,6 +185,10 @@ export const AppointmentsScreen: React.FC = () => {
       setNewPatientName('');
       setNewPatientPhone('');
       setNewPatientAge('');
+      setNewPatientGender('Male');
+      setNewAddress('');
+      setNewProfession('');
+      setNewPrice('');
       setNewSymptoms('');
       
       interactionUtils.playSuccess();
@@ -234,14 +276,11 @@ export const AppointmentsScreen: React.FC = () => {
           data={filteredAppointments}
           keyExtractor={(item) => item._id}
           refreshing={isRefreshing}
+          refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
           initialNumToRender={10}
           maxToRenderPerBatch={5}
           windowSize={11}
           removeClippedSubviews={true}
-          onRefresh={() => {
-            setIsRefreshing(true);
-            fetchData();
-          }}
           contentContainerStyle={styles.listContainer}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -252,10 +291,10 @@ export const AppointmentsScreen: React.FC = () => {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.patientName}>{item.patientName}</Text>
+                  <Text style={styles.patientName}>{item.name || item.patientName}</Text>
                   <Text style={styles.contactInfo}>
-                    📞 {item.patientPhone || 'N/A'}{' '}
-                    {item.patientAge ? `• ${item.patientAge} yrs` : ''}
+                    📞 {item.phone || item.patientPhone || 'N/A'}{' '}
+                    {item.age || item.patientAge ? `• ${item.age || item.patientAge} yrs` : ''}
                   </Text>
                 </View>
                 <View
@@ -297,6 +336,23 @@ export const AppointmentsScreen: React.FC = () => {
               )}
 
               {/* Action Buttons */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <DropdownPicker 
+                    label="Payment" 
+                    value={item.paymentStatus || 'Due'} 
+                    options={[{label:'Paid', value:'Paid'}, {label:'Due', value:'Due'}]} 
+                    onSelect={(v) => console.log('Payment status updated to', v)} 
+                  />
+                </View>
+                <TouchableOpacity 
+                  style={{ padding: 12, borderRadius: 8, backgroundColor: item.prescriptionId ? (item.prescriptionComplete ? '#d1fae5' : '#fef08a') : '#fee2e2' }}
+                  onPress={() => console.log('Open Prescription')}
+                >
+                  <Text style={{ fontSize: 18 }}>💊</Text>
+                </TouchableOpacity>
+              </View>
+
               <View style={styles.cardActions}>
                 {item.status !== 'Completed' && (
                   <TouchableOpacity
@@ -310,7 +366,7 @@ export const AppointmentsScreen: React.FC = () => {
                   style={[styles.cardBtn, styles.btnSecondary]}
                   onPress={() => {
                     setRescheduleModalAppt(item);
-                    setRescheduleDate(item.appointmentDate);
+                    setRescheduleDate(item.appointmentDate || '');
                     setRescheduleSlot(item.slotTime || '11:00 AM');
                   }}
                 >
@@ -332,36 +388,84 @@ export const AppointmentsScreen: React.FC = () => {
       <Modal visible={isCreateModalOpen} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Book New Appointment</Text>
+            <Text style={styles.modalTitle}>Book New Appointment (Step {step}/2)</Text>
 
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Patient Full Name"
-              placeholderTextColor="#94a3b8"
-              value={newPatientName}
-              onChangeText={setNewPatientName}
-            />
+            {step === 1 ? (
+              <>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Patient Full Name"
+                  placeholderTextColor="#94a3b8"
+                  value={newPatientName}
+                  onChangeText={setNewPatientName}
+                />
 
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Phone Number"
-              placeholderTextColor="#94a3b8"
-              keyboardType="phone-pad"
-              value={newPatientPhone}
-              onChangeText={setNewPatientPhone}
-            />
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Phone Number"
+                  placeholderTextColor="#94a3b8"
+                  keyboardType="phone-pad"
+                  value={newPatientPhone}
+                  onChangeText={setNewPatientPhone}
+                />
 
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Age (e.g., 34)"
-              placeholderTextColor="#94a3b8"
-              keyboardType="numeric"
-              value={newPatientAge}
-              onChangeText={setNewPatientAge}
-            />
+                <View style={{ flexDirection: 'row', gap: 10, zIndex: 10 }}>
+                  <TextInput
+                    style={[styles.modalInput, { flex: 1 }]}
+                    placeholder="Age"
+                    placeholderTextColor="#94a3b8"
+                    keyboardType="numeric"
+                    value={newPatientAge}
+                    onChangeText={setNewPatientAge}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <DropdownPicker 
+                      label="" 
+                      placeholder="Gender" 
+                      value={newPatientGender} 
+                      options={GENDERS} 
+                      onSelect={setNewPatientGender} 
+                    />
+                  </View>
+                </View>
 
-            <Text style={styles.modalLabel}>Select Doctor</Text>
-            <View style={styles.doctorPickerContainer}>
+                <View style={{ zIndex: 9 }}>
+                  <DropdownPicker 
+                    label="" 
+                    placeholder="Department" 
+                    value={newDepartment} 
+                    options={DEPARTMENTS} 
+                    onSelect={setNewDepartment} 
+                  />
+                </View>
+
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Address"
+                  placeholderTextColor="#94a3b8"
+                  value={newAddress}
+                  onChangeText={setNewAddress}
+                />
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalBtnCancel]}
+                    onPress={() => { setIsCreateModalOpen(false); setStep(1); }}
+                  >
+                    <Text style={styles.modalBtnCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalBtn, styles.modalBtnConfirm]}
+                    onPress={() => setStep(2)}
+                  >
+                    <Text style={styles.modalBtnConfirmText}>Next</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalLabel}>Select Doctor</Text>
+                <View style={styles.doctorPickerContainer}>
               {doctors.slice(0, 4).map((doc) => (
                 <TouchableOpacity
                   key={doc._id}
@@ -369,7 +473,10 @@ export const AppointmentsScreen: React.FC = () => {
                     styles.doctorChip,
                     selectedDoctorId === doc._id && styles.doctorChipActive,
                   ]}
-                  onPress={() => setSelectedDoctorId(doc._id)}
+                  onPress={() => {
+                    setSelectedDoctorId(doc._id);
+                    setNewPrice(doc.visitingFee ? doc.visitingFee.toString() : '500');
+                  }}
                 >
                   <Text
                     style={[
@@ -385,19 +492,61 @@ export const AppointmentsScreen: React.FC = () => {
 
             <TextInput
               style={styles.modalInput}
-              placeholder="Date (YYYY-MM-DD)"
+              placeholder="Consultation Fee (₹)"
               placeholderTextColor="#94a3b8"
-              value={newApptDate}
-              onChangeText={setNewApptDate}
+              keyboardType="numeric"
+              value={newPrice}
+              onChangeText={setNewPrice}
             />
 
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Time Slot (e.g. 10:30 AM)"
-              placeholderTextColor="#94a3b8"
-              value={newSlotTime}
-              onChangeText={setNewSlotTime}
-            />
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
+              <TouchableOpacity
+                style={[styles.modalInput, { flex: 1, justifyContent: 'center' }]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={{ color: newApptDate ? '#0f172a' : '#94a3b8' }}>
+                  {newApptDate || 'Select Date'}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={new Date(newApptDate || Date.now())}
+                  mode="date"
+                  display="default"
+                  onChange={(event, date) => {
+                    setShowDatePicker(Platform.OS === 'ios');
+                    if (date) setNewApptDate(date.toISOString().split('T')[0]);
+                  }}
+                />
+              )}
+
+              <TouchableOpacity
+                style={[styles.modalInput, { flex: 1, justifyContent: 'center' }]}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Text style={{ color: newSlotTime ? '#0f172a' : '#94a3b8' }}>
+                  {newSlotTime || 'Select Time'}
+                </Text>
+              </TouchableOpacity>
+              {showTimePicker && (
+                <DateTimePicker
+                  value={new Date()}
+                  mode="time"
+                  display="default"
+                  onChange={(event, date) => {
+                    setShowTimePicker(Platform.OS === 'ios');
+                    if (date) {
+                      const hours = date.getHours();
+                      const minutes = date.getMinutes();
+                      const ampm = hours >= 12 ? 'PM' : 'AM';
+                      const formattedHours = hours % 12 || 12;
+                      const formattedMins = minutes < 10 ? `0${minutes}` : minutes;
+                      setNewSlotTime(`${formattedHours}:${formattedMins} ${ampm}`);
+                    }
+                  }}
+                />
+              )}
+            </View>
 
             <TextInput
               style={styles.modalInput}
@@ -410,9 +559,9 @@ export const AppointmentsScreen: React.FC = () => {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnCancel]}
-                onPress={() => setIsCreateModalOpen(false)}
+                onPress={() => setStep(1)}
               >
-                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+                <Text style={styles.modalBtnCancelText}>Back</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.modalBtnConfirm]}
@@ -426,6 +575,8 @@ export const AppointmentsScreen: React.FC = () => {
                 )}
               </TouchableOpacity>
             </View>
+            </>
+            )}
           </View>
         </View>
       </Modal>
@@ -436,17 +587,29 @@ export const AppointmentsScreen: React.FC = () => {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Reschedule Appointment</Text>
             <Text style={styles.modalSubtitle}>
-              Patient: {rescheduleModalAppt?.patientName}
+              Patient: {rescheduleModalAppt?.name || rescheduleModalAppt?.patientName}
             </Text>
 
             <Text style={styles.modalLabel}>New Date</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={rescheduleDate}
-              onChangeText={setRescheduleDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#94a3b8"
-            />
+            <TouchableOpacity
+              style={[styles.modalInput, { justifyContent: 'center' }]}
+              onPress={() => setShowRescheduleDatePicker(true)}
+            >
+              <Text style={{ color: rescheduleDate ? '#0f172a' : '#94a3b8' }}>
+                {rescheduleDate || 'Select Date'}
+              </Text>
+            </TouchableOpacity>
+            {showRescheduleDatePicker && (
+              <DateTimePicker
+                value={new Date(rescheduleDate || Date.now())}
+                mode="date"
+                display="default"
+                onChange={(event, date) => {
+                  setShowRescheduleDatePicker(Platform.OS === 'ios');
+                  if (date) setRescheduleDate(date.toISOString().split('T')[0]);
+                }}
+              />
+            )}
 
             <Text style={styles.modalLabel}>New Slot Time</Text>
             <TextInput

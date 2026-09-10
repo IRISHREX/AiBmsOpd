@@ -12,6 +12,12 @@ import { DoctorsScreen } from '../screens/DoctorsScreen';
 import { PrescriptionsScreen } from '../screens/PrescriptionsScreen';
 import { InvoicesScreen } from '../screens/InvoicesScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { MenuScreen } from '../screens/MenuScreen';
+import { MedicineStoreScreen } from '../screens/MedicineStoreScreen';
+import { CompoundersScreen } from '../screens/CompoundersScreen';
+import { ReportsScreen } from '../screens/ReportsScreen';
+import { MessagesScreen } from '../screens/MessagesScreen';
+import { ReferralsScreen } from '../screens/ReferralsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -42,7 +48,7 @@ const MainTabs = () => {
           if (route.name === 'Doctors') icon = '🩺';
           if (route.name === 'Prescriptions') icon = '💊';
           if (route.name === 'Invoices') icon = '💳';
-          if (route.name === 'Profile') icon = '👤';
+          if (route.name === 'Menu') icon = '☰';
           return <Text style={{ fontSize: 18 }}>{icon}</Text>;
         },
       })}
@@ -73,9 +79,9 @@ const MainTabs = () => {
         options={{ title: 'Billing' }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{ title: 'Settings' }}
+        name="Menu"
+        component={MenuScreen}
+        options={{ title: 'Menu' }}
       />
     </Tab.Navigator>
   );
@@ -98,7 +104,15 @@ export const AppNavigator: React.FC = () => {
         {!isAuthenticated ? (
           <Stack.Screen name="Login" component={LoginScreen} />
         ) : (
-          <Stack.Screen name="Main" component={MainTabs} />
+          <>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="MedicineStore" component={MedicineStoreScreen} options={{ headerShown: true, title: 'Medicine Store' }} />
+            <Stack.Screen name="Compounders" component={CompoundersScreen} options={{ headerShown: true, title: 'Compounders & Staff' }} />
+            <Stack.Screen name="Reports" component={ReportsScreen} options={{ headerShown: true, title: 'Patient Reports' }} />
+            <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: true, title: 'Messages' }} />
+            <Stack.Screen name="Referrals" component={ReferralsScreen} options={{ headerShown: true, title: 'Referrals' }} />
+            <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: true, title: 'Profile' }} />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>

@@ -2,48 +2,145 @@ export type UserRole = 'admin' | 'doctor' | 'compounder' | 'patient';
 
 export interface User {
   _id: string;
+  firstName?: string;
+  lastName?: string;
   name: string;
   email: string;
   phone?: string;
+  nic?: string;
+  dob?: string;
+  age?: number;
+  gender?: string;
   role: UserRole;
-  avatar?: string;
+  qualifications?: string;
+  doctorDepartment?: string;
+  consultationFee?: number;
+  docAvatar?: { url: string; public_id: string } | string;
+  signImage?: { url: string; public_id: string } | string;
+  headerImage?: { url: string; public_id: string } | string;
   doctorInfo?: Doctor;
+  compounders?: string[] | User[];
+  assignedDoctors?: string[] | User[];
   createdAt?: string;
 }
 
-export interface Doctor {
-  _id: string;
-  name: string;
-  email: string;
-  phone: string;
+export interface Doctor extends User {
   specialization: string;
   department?: string;
   qualification?: string;
   experience?: string;
   visitingFee?: number;
-  consultationFee?: number;
   availableDays?: string[];
   slotsPerDay?: number;
-  headerImage?: string;
-  signImage?: string;
+}
+
+export interface ClinicalFindingsData {
+  patientCondition?: {
+    c1?: string;
+    c2?: string;
+    c3?: string;
+    c4?: string;
+  };
+  polar?: string;
+  icterus?: string;
+  edema?: string;
+  cyanosis?: string;
+  clubbing?: string;
+  lymph_nodes?: string;
+  chest?: string;
+  cvs?: string;
+  per_abdomen?: {
+    pt?: string;
+    pv?: string;
+  };
+  others?: string;
+}
+
+export interface DiagnosysData {
+  BP?: string;
+  PR?: string;
+  SPO2?: string;
+  Temp?: string;
+  Height?: string;
+  Weight?: string;
+  BMI?: string;
+  Others?: string;
+}
+
+export interface MedicineAdviceItem {
+  name?: string;
+  type?: string;
+  dose?: string;
+  frequency?: string;
+  route?: string;
+  duration?: string;
+  notes?: string;
+}
+
+export interface AdviceData {
+  testAdvice?: string[];
+  medication?: string;
+  diet?: string;
+}
+
+export interface AppointmentResultItem {
+  initialComplain?: string;
+  presentingComplaints?: string;
+  medicalHistory?: string;
+  clinical_findings?: ClinicalFindingsData;
+  diagnosys_heading?: string;
+  diagnosys?: DiagnosysData;
+  Gravida?: string;
+  Parity?: string;
+  LMP?: string;
+  EDD?: string;
+  POG?: string;
+  LCB?: string;
+  MOD?: string;
+  medicineAdvice?: MedicineAdviceItem[];
+  advice?: AdviceData;
+  additionalAdvice?: string;
+  followUp?: string;
 }
 
 export interface Appointment {
   _id: string;
   appointmentId?: string;
-  patientName: string;
-  patientPhone: string;
+  patientName?: string;
+  name?: string;
+  email?: string;
+  patientPhone?: string;
+  phone?: string;
   patientAge?: number;
-  patientGender?: 'Male' | 'Female' | 'Other';
+  age?: number;
+  nic?: string;
+  dob?: string;
+  gender?: string;
+  patientGender?: 'Male' | 'Female' | 'Other' | 'Others';
   patientAddress?: string;
+  address?: string;
+  profession?: string;
+  department?: string;
   doctorId: string;
   doctorName?: string;
-  appointmentDate: string;
+  doctor?: { firstName: string; lastName: string };
+  appointmentDate?: string;
+  appointment_date?: string;
+  followup_date?: string;
   slotTime?: string;
-  status: 'Pending' | 'Completed' | 'Cancelled' | 'Rescheduled';
+  status: 'Pending' | 'Completed' | 'Cancelled' | 'Rescheduled' | 'Accepted' | 'Rejected';
+  paymentStatus?: 'Pending' | 'Accepted' | 'Due' | 'Paid';
+  price?: number;
+  hasVisited?: boolean;
   symptoms?: string[];
   notes?: string;
   tokenNumber?: number;
+  clinicalFindings?: string;
+  provisionalDiagnosis?: {
+    type?: string;
+    value?: string;
+  };
+  result?: AppointmentResultItem[];
   createdAt?: string;
 }
 

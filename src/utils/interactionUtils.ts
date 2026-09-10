@@ -21,8 +21,15 @@ class InteractionUtils {
 
   private async initSounds() {
     try {
-      // Load standard UI sounds from remote or local assets
-      // We will leave the audio silent if assets aren't present and just use Haptics
+      const { sound: click } = await Audio.Sound.createAsync(
+        { uri: 'https://cdn.freesound.org/previews/256/256113_3263906-lq.mp3' }
+      );
+      this.clickSound = click;
+
+      const { sound: success } = await Audio.Sound.createAsync(
+        { uri: 'https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3' }
+      );
+      this.successSound = success;
     } catch (e) {
       console.warn("Failed to load sound assets", e);
     }
@@ -32,6 +39,9 @@ class InteractionUtils {
   async playClick() {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (this.clickSound) {
+        await this.clickSound.replayAsync();
+      }
     } catch (e) {
       // ignore
     }
@@ -41,6 +51,9 @@ class InteractionUtils {
   async playSuccess() {
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (this.successSound) {
+        await this.successSound.replayAsync();
+      }
     } catch (e) {
       // ignore
     }
