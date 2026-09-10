@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -22,24 +22,41 @@ import { colors } from '../theme/colors';
 
 interface Referral {
   _id: string;
+  referralType?: 'patient_request' | 'doctor_referral';
   patientName: string;
-  diagnosis: string;
-  clinicalNotes: string;
-  urgency: string;
+  patientPhone?: string;
+  patientEmail?: string;
+  patientAddress?: string;
+  age?: number;
+  gender?: string;
+  applicantBy?: string;
+  applicantPhone?: string;
+  targetDoctorId?: any;
+  targetDoctorName?: string;
+  targetDoctorSpecialty?: string;
+  department?: string;
+  appointmentDate?: string;
+  appointmentSlot?: string;
+  convertedToAppointment?: boolean;
+  appointmentId?: any;
+  diagnosis?: string;
+  clinicalNotes?: string;
+  urgency?: string;
   status: string;
   createdAt: string;
 }
 
-export const ReferralsScreen: React.FC = () => {
+export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { colors: theme } = useTheme();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+  const [activeTab, setActiveTab] = useState<'inbound' | 'outbound'>('inbound');
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+
+  // Outbound Referral Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Compose Fields
   const [patientName, setPatientName] = useState('');
   const [diagnosis, setDiagnosis] = useState('');
   const [clinicalNotes, setClinicalNotes] = useState('');
@@ -47,7 +64,7 @@ export const ReferralsScreen: React.FC = () => {
 
   const fetchReferrals = useCallback(async () => {
     try {
-      const { data } = await api.get('/api/v1/referral/getall');
+      const { data } = await api.get('/api/v1/referral/all?limit=100');
       setReferrals(data.referrals || []);
     } catch (e: any) {
       Alert.alert('Error', e.response?.data?.message || 'Failed to load referrals');
@@ -66,7 +83,47 @@ export const ReferralsScreen: React.FC = () => {
     fetchReferrals();
   }, [fetchReferrals]);
 
-  const handleCreate = async () => {
+  // Convert Inbound Referral to Official Appointment
+  const handleConvertToAppointment = async (referral: Referral) => {
+    try {
+      interactionUtils.playClick();
+      setConvertingId(referral._id);
+
+      const response = await api.post(`/api/v1/referral/${referral._id}/convert-to-appointment`);
+      interactionUtils.playSuccess();
+
+      // Update local referral in state
+      setReferrals((prev) =>
+        prev.map((r) => {
+          if (r._id === referral._id) {
+            return {
+              ...r,
+              convertedToAppointment: true,
+              status: 'scheduled',
+              appointmentId: response.data.appointment?._id,
+            };
+          }
+          return r;
+        })
+      );
+
+      Alert.alert(
+        'Appointment Created!',
+        `Patient ${referral.patientName} has been successfully added to Appointments list under Dr. ${referral.targetDoctorName || 'Assigned Doctor'}.`,
+        [
+          { text: 'View Appointments', onPress: () => navigation.navigate('Appointments') },
+          { text: 'OK', style: 'cancel' },
+        ]
+      );
+    } catch (e: any) {
+      Alert.alert('Conversion Failed', e.response?.data?.message || 'Failed to convert referral to appointment');
+    } finally {
+      setConvertingId(null);
+    }
+  };
+
+  // Create Outbound Referral
+  const handleCreateOutbound = async () => {
     if (!patientName.trim() || !diagnosis.trim() || !clinicalNotes.trim()) {
       Alert.alert('Validation Error', 'Patient Name, Diagnosis, and Notes are required.');
       return;
@@ -79,7 +136,6 @@ export const ReferralsScreen: React.FC = () => {
         diagnosis: diagnosis.trim(),
         clinicalNotes: clinicalNotes.trim(),
         urgency,
-        patientId: '646f6e746b6e6f7779657430',
       });
       interactionUtils.playSuccess();
       Alert.alert('Success', 'Patient referral created successfully');
@@ -99,7 +155,7 @@ export const ReferralsScreen: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert('Confirm Delete', 'Delete this referral?', [
+    Alert.alert('Confirm Delete', 'Delete this referral record?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -108,7 +164,7 @@ export const ReferralsScreen: React.FC = () => {
           try {
             await api.delete(`/api/v1/referral/delete/${id}`);
             interactionUtils.playClick();
-            setReferrals(prev => prev.filter(r => r._id !== id));
+            setReferrals((prev) => prev.filter((r) => r._id !== id));
           } catch (e: any) {
             Alert.alert('Error', 'Failed to delete referral');
           }
@@ -130,21 +186,105 @@ export const ReferralsScreen: React.FC = () => {
     }
   };
 
+  // Filter into Inbound patient requests vs Outbound hospital referrals
+  const inboundList = useMemo(() => {
+    return referrals.filter(
+      (r) => r.referralType === 'patient_request' || r.targetDoctorName || r.applicantBy
+    );
+  }, [referrals]);
+
+  const outboundList = useMemo(() => {
+    return referrals.filter(
+      (r) => r.referralType === 'doctor_referral' || (!r.targetDoctorName && !r.applicantBy)
+    );
+  }, [referrals]);
+
+  const activeList = activeTab === 'inbound' ? inboundList : outboundList;
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Top Header Row */}
       <View style={styles.headerRow}>
         <View>
-          <Text style={[styles.title, { color: theme.textPrimary }]}>Clinical Referrals</Text>
+          <Text style={[styles.title, { color: theme.textPrimary }]}>Referrals Hub</Text>
           <Text style={[styles.subtitle, { color: theme.textMuted }]}>
-            External & Specialist Transfer Cases
+            {inboundList.filter(r => !r.convertedToAppointment).length} pending appointments • {outboundList.length} hospital transfers
           </Text>
         </View>
+
+        {activeTab === 'inbound' ? (
+          <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: theme.gold }]}
+            onPress={() => navigation.navigate('PublicBooking')}
+          >
+            <Ionicons name="add-circle-outline" size={16} color="#ffffff" style={{ marginRight: 4 }} />
+            <Text style={styles.addBtnText}>Book (Referral)</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.addBtn, { backgroundColor: theme.primary }]}
+            onPress={() => setIsModalOpen(true)}
+          >
+            <Ionicons name="git-compare-outline" size={16} color="#ffffff" style={{ marginRight: 4 }} />
+            <Text style={styles.addBtnText}>New Transfer</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Two Segmented Tabs */}
+      <View style={[styles.tabBar, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
         <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: theme.primary }]}
-          onPress={() => setIsModalOpen(true)}
+          style={[
+            styles.tabItem,
+            activeTab === 'inbound' && [styles.tabItemActive, { backgroundColor: theme.cardBg }],
+          ]}
+          onPress={() => {
+            interactionUtils.playClick();
+            setActiveTab('inbound');
+          }}
         >
-          <Ionicons name="git-compare-outline" size={16} color="#ffffff" style={{ marginRight: 4 }} />
-          <Text style={styles.addBtnText}>New Referral</Text>
+          <Ionicons
+            name="arrow-down-circle-outline"
+            size={16}
+            color={activeTab === 'inbound' ? theme.primary : theme.textMuted}
+            style={{ marginRight: 6 }}
+          />
+          <Text
+            style={[
+              styles.tabText,
+              { color: activeTab === 'inbound' ? theme.primary : theme.textSecondary },
+              activeTab === 'inbound' && { fontWeight: '800' },
+            ]}
+          >
+            Patient Inbound ({inboundList.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tabItem,
+            activeTab === 'outbound' && [styles.tabItemActive, { backgroundColor: theme.cardBg }],
+          ]}
+          onPress={() => {
+            interactionUtils.playClick();
+            setActiveTab('outbound');
+          }}
+        >
+          <Ionicons
+            name="arrow-up-circle-outline"
+            size={16}
+            color={activeTab === 'outbound' ? theme.gold : theme.textMuted}
+            style={{ marginRight: 6 }}
+          />
+          <Text
+            style={[
+              styles.tabText,
+              { color: activeTab === 'outbound' ? theme.goldDark : theme.textSecondary },
+              activeTab === 'outbound' && { fontWeight: '800' },
+            ]}
+          >
+            Hospital Transfers ({outboundList.length})
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -152,7 +292,7 @@ export const ReferralsScreen: React.FC = () => {
         <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 40 }} />
       ) : (
         <FlatList
-          data={referrals}
+          data={activeList}
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.list}
           refreshControl={
@@ -165,11 +305,125 @@ export const ReferralsScreen: React.FC = () => {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Ionicons name="git-compare-outline" size={48} color={theme.textMuted} style={{ marginBottom: 8 }} />
-              <Text style={[styles.emptyText, { color: theme.textMuted }]}>No referral cases logged</Text>
+              <Ionicons
+                name={activeTab === 'inbound' ? 'people-outline' : 'git-compare-outline'}
+                size={48}
+                color={theme.textMuted}
+                style={{ marginBottom: 8 }}
+              />
+              <Text style={[styles.emptyText, { color: theme.textMuted }]}>
+                {activeTab === 'inbound'
+                  ? 'No patient appointment requests yet'
+                  : 'No hospital transfer referrals logged'}
+              </Text>
             </View>
           }
           renderItem={({ item }) => {
+            const isConverted = Boolean(item.convertedToAppointment);
+            const isConverting = convertingId === item._id;
+
+            if (activeTab === 'inbound') {
+              // INBOUND APPOINTMENT REFERRAL CARD
+              return (
+                <View
+                  style={[
+                    styles.card,
+                    { backgroundColor: theme.cardBg, borderColor: theme.border },
+                    isConverted && { borderColor: theme.successBorder },
+                  ]}
+                >
+                  <View style={styles.cardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="person-outline" size={16} color={theme.primary} />
+                        <Text style={[styles.name, { color: theme.textPrimary }]}>{item.patientName}</Text>
+                      </View>
+                      <View style={styles.metaRow}>
+                        <Ionicons name="call-outline" size={12} color={theme.textMuted} />
+                        <Text style={[styles.metaText, { color: theme.textSecondary }]}>
+                          {item.patientPhone || item.applicantPhone || 'No phone'}
+                        </Text>
+                        {item.age ? (
+                          <>
+                            <Text style={[styles.metaText, { color: theme.textMuted }]}>•</Text>
+                            <Text style={[styles.metaText, { color: theme.textSecondary }]}>
+                              {item.age} yrs ({item.gender || 'M'})
+                            </Text>
+                          </>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    {/* Applicant By Badge */}
+                    <View style={[styles.applicantBadge, { backgroundColor: theme.goldSoft, borderColor: theme.goldBorder }]}>
+                      <Ionicons name="shield-checkmark-outline" size={11} color={theme.goldDark} />
+                      <Text style={[styles.applicantBadgeText, { color: theme.goldDark }]}>
+                        {item.applicantBy || 'Self'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Target Doctor Info */}
+                  <View style={[styles.doctorTargetBox, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+                    <Ionicons name="medkit-outline" size={14} color={theme.primary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.doctorTargetName, { color: theme.textPrimary }]}>
+                        Requested Doctor: <Text style={{ fontWeight: '800', color: theme.primary }}>{item.targetDoctorName || 'Any Physician'}</Text>
+                      </Text>
+                      <Text style={[styles.doctorTargetSub, { color: theme.textMuted }]}>
+                        Dept: {item.department || 'General'} • Slot: {item.appointmentSlot || '10:00 AM'} ({formatDate(item.appointmentDate)})
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Symptoms / Reason */}
+                  <Text style={[styles.symptomsText, { color: theme.textSecondary }]}>
+                    <Text style={{ fontWeight: '700', color: theme.textPrimary }}>Symptoms: </Text>
+                    {item.clinicalNotes || item.diagnosis || 'Consultation requested'}
+                  </Text>
+
+                  {/* Card Action Row: Add as Appointment */}
+                  <View style={[styles.cardFooter, { borderTopColor: theme.borderLight }]}>
+                    <Text style={[styles.date, { color: theme.textMuted }]}>
+                      Received: {formatDate(item.createdAt)}
+                    </Text>
+
+                    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                      <TouchableOpacity
+                        style={[styles.deleteBtn, { backgroundColor: theme.dangerSoft, borderColor: theme.dangerBorder }]}
+                        onPress={() => handleDelete(item._id)}
+                      >
+                        <Ionicons name="trash-outline" size={13} color={theme.danger} />
+                      </TouchableOpacity>
+
+                      {isConverted ? (
+                        <View style={[styles.convertedBadge, { backgroundColor: theme.successSoft, borderColor: theme.successBorder }]}>
+                          <Ionicons name="checkmark-circle" size={14} color={theme.success} />
+                          <Text style={[styles.convertedBadgeText, { color: theme.success }]}>Added as Appt</Text>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.addAsApptBtn, { backgroundColor: theme.primary }]}
+                          onPress={() => handleConvertToAppointment(item)}
+                          disabled={isConverting}
+                        >
+                          {isConverting ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                          ) : (
+                            <>
+                              <Ionicons name="calendar" size={13} color="#ffffff" style={{ marginRight: 4 }} />
+                              <Text style={styles.addAsApptBtnText}>Add as Appointment</Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              );
+            }
+
+            // OUTBOUND HOSPITAL TRANSFER REFERRAL CARD
             const isEmergency = item.urgency === 'emergency';
             const isUrgent = item.urgency === 'urgent';
 
@@ -177,7 +431,7 @@ export const ReferralsScreen: React.FC = () => {
               <View style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
                 <View style={styles.cardHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="person-outline" size={16} color={theme.gold} />
+                    <Ionicons name="business-outline" size={16} color={theme.gold} />
                     <Text style={[styles.name, { color: theme.textPrimary }]}>{item.patientName}</Text>
                   </View>
                   <View
@@ -207,7 +461,7 @@ export const ReferralsScreen: React.FC = () => {
                 </Text>
 
                 <Text style={[styles.notes, { color: theme.textMuted }]}>
-                  <Text style={{ fontWeight: '600', color: theme.textSecondary }}>Notes: </Text>
+                  <Text style={{ fontWeight: '600', color: theme.textSecondary }}>Clinical Notes: </Text>
                   {item.clinicalNotes}
                 </Text>
 
@@ -229,7 +483,7 @@ export const ReferralsScreen: React.FC = () => {
         />
       )}
 
-      {/* Form Modal */}
+      {/* New Outbound Transfer Modal */}
       <Modal visible={isModalOpen} animationType="slide" transparent>
         <KeyboardAvoidingView
           style={styles.modalOverlay}
@@ -238,12 +492,12 @@ export const ReferralsScreen: React.FC = () => {
           <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Create Specialist Referral</Text>
+                <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Doctor Outbound Referral</Text>
                 <TouchableOpacity onPress={() => setIsModalOpen(false)}>
                   <Ionicons name="close-circle-outline" size={24} color={theme.textMuted} />
                 </TouchableOpacity>
               </View>
-              
+
               <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Patient Full Name *</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
@@ -256,7 +510,7 @@ export const ReferralsScreen: React.FC = () => {
               <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Provisional Diagnosis *</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
-                placeholder="e.g. Uncontrolled Hypertension / Suspected Appendicitis"
+                placeholder="e.g. Uncontrolled Hypertension / Specialist Required"
                 placeholderTextColor={theme.textMuted}
                 value={diagnosis}
                 onChangeText={setDiagnosis}
@@ -314,7 +568,7 @@ export const ReferralsScreen: React.FC = () => {
               <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Clinical Notes & Justification *</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary, height: 90, textAlignVertical: 'top' }]}
-                placeholder="Reason for referral, vitals summary, investigation results..."
+                placeholder="Transfer reasoning, hospital requirements, vitals..."
                 placeholderTextColor={theme.textMuted}
                 multiline
                 value={clinicalNotes}
@@ -323,20 +577,20 @@ export const ReferralsScreen: React.FC = () => {
 
               <View style={styles.modalButtons}>
                 <TouchableOpacity
-                  style={[styles.btn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderWidth: 1 }]}
+                  style={[styles.modalBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderWidth: 1 }]}
                   onPress={() => setIsModalOpen(false)}
                 >
-                  <Text style={[styles.btnCancelText, { color: theme.textSecondary }]}>Cancel</Text>
+                  <Text style={[styles.modalBtnCancel, { color: theme.textSecondary }]}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.btn, { backgroundColor: theme.primary }]}
-                  onPress={handleCreate}
+                  style={[styles.modalBtn, { backgroundColor: theme.primary }]}
+                  onPress={handleCreateOutbound}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.btnConfirmText}>Submit Referral</Text>
+                    <Text style={styles.modalBtnConfirm}>Submit Transfer</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -357,7 +611,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   title: {
     fontSize: 18,
@@ -370,9 +624,9 @@ const styles = StyleSheet.create({
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 9,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 3,
@@ -380,8 +634,33 @@ const styles = StyleSheet.create({
   },
   addBtnText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 3,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  tabItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 9,
+  },
+  tabItemActive: {
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   list: {
     paddingBottom: 24,
@@ -399,12 +678,56 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 8,
   },
   name: {
     fontSize: 15,
     fontWeight: '800',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  metaText: {
+    fontSize: 12,
+  },
+  applicantBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  applicantBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+  },
+  doctorTargetBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 9,
+    borderRadius: 9,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  doctorTargetName: {
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
+  doctorTargetSub: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  symptomsText: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginBottom: 8,
   },
   urgencyBadge: {
     paddingHorizontal: 8,
@@ -424,7 +747,7 @@ const styles = StyleSheet.create({
   notes: {
     fontSize: 12.5,
     lineHeight: 18,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   cardFooter: {
     flexDirection: 'row',
@@ -437,15 +760,37 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   deleteBtn: {
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  deleteBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  addAsApptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  addAsApptBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  convertedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 7,
     borderWidth: 1,
   },
-  deleteBtnText: {
+  convertedBadgeText: {
     fontSize: 11,
     fontWeight: '700',
   },
@@ -514,17 +859,17 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingBottom: 20,
   },
-  btn: {
+  modalBtn: {
     flex: 1,
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
   },
-  btnCancelText: {
+  modalBtnCancel: {
     fontSize: 14,
     fontWeight: '700',
   },
-  btnConfirmText: {
+  modalBtnConfirm: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',

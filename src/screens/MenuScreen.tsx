@@ -12,6 +12,7 @@ export const MenuScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [isBrandingOpen, setIsBrandingOpen] = useState(false);
 
   const menuItems = [
+    { title: 'Doctor Booking (Referral)', icon: 'calendar-number-outline', color: colors.gold, bg: colors.goldSoft, route: 'PublicBooking' },
     { title: 'Medicine Store', icon: 'medkit-outline', color: colors.gold, bg: colors.goldSoft, route: 'MedicineStore' },
     { title: 'Compounders & Staff', icon: 'people-outline', color: colors.primary, bg: colors.primarySoft, route: 'Compounders' },
     { title: 'Patient Reports', icon: 'document-text-outline', color: colors.primarySky, bg: colors.infoSoft, route: 'Reports' },

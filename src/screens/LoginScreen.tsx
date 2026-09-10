@@ -17,7 +17,7 @@ import { colors } from '../theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { interactionUtils } from '../utils/interactionUtils';
 
-export const LoginScreen: React.FC = () => {
+export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
   const { login, backendUrl, setCustomBackendUrl } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -138,6 +138,32 @@ export const LoginScreen: React.FC = () => {
             ) : (
               <Text style={styles.buttonText}>Sign In</Text>
             )}
+          </TouchableOpacity>
+
+          {/* Public Patient Booking / Referral Link */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR PATIENT SERVICE</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity
+            style={styles.publicBookingBtn}
+            onPress={() => {
+              interactionUtils.playClick();
+              if (navigation?.navigate) {
+                navigation.navigate('PublicBooking');
+              }
+            }}
+          >
+            <View style={styles.publicBookingIconWrap}>
+              <Ionicons name="calendar-outline" size={20} color={colors.goldBright} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.publicBookingTitle}>Book Doctor Appointment</Text>
+              <Text style={styles.publicBookingSubtitle}>Patient Inbound Referral • No Login Required</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.gold} />
           </TouchableOpacity>
 
           {/* Backend URL configuration drawer / toggle */}
@@ -323,6 +349,59 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e2e8f0',
+  },
+  dividerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94a3b8',
+    letterSpacing: 0.8,
+  },
+  publicBookingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+    borderRadius: 14,
+    padding: 14,
+    gap: 12,
+    borderWidth: 1.5,
+    borderColor: colors.gold,
+    shadowColor: colors.primaryDark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  publicBookingIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: colors.primaryDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gold,
+  },
+  publicBookingTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#f8fafc',
+    marginBottom: 2,
+  },
+  publicBookingSubtitle: {
+    fontSize: 11,
+    color: colors.goldBright,
+    fontWeight: '500',
   },
   configToggle: {
     marginTop: 20,
