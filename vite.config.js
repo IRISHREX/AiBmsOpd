@@ -18,10 +18,16 @@ const extensions = [
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  esbuild: {
+    loader: 'tsx',
+    include: /.*\.jsx?$|.*\.tsx?$/,
+    exclude: [],
+  },
   resolve: {
     alias: [
       { find: 'react-native/Libraries/Utilities/codegenNativeComponent', replacement: path.resolve(__dirname, 'src/utils/noopShim.ts') },
       { find: 'react-native/Libraries/Utilities/codegenNativeCommands', replacement: path.resolve(__dirname, 'src/utils/noopShim.ts') },
+      { find: '@react-native/assets-registry/registry', replacement: path.resolve(__dirname, 'src/utils/assetsRegistryShim.js') },
       { find: /^react-native$/, replacement: 'react-native-web' },
       { find: 'react-native', replacement: 'react-native-web' },
     ],
