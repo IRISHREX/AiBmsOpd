@@ -101,19 +101,27 @@ export const navigationRef = createNavigationContainerRef<any>();
 
 export function resetToMain() {
   if (navigationRef.isReady()) {
-    navigationRef.reset({
-      index: 0,
-      routes: [{ name: 'Main' }],
-    });
+    try {
+      navigationRef.reset({
+        index: 0,
+        routes: [{ name: 'Main' }],
+      });
+    } catch (e) {
+      console.warn('resetToMain notice:', e);
+    }
   }
 }
 
 export function resetToPublic() {
   if (navigationRef.isReady()) {
-    navigationRef.reset({
-      index: 0,
-      routes: [{ name: 'PublicBooking' }],
-    });
+    try {
+      navigationRef.reset({
+        index: 0,
+        routes: [{ name: 'PublicBooking' }],
+      });
+    } catch (e) {
+      console.warn('resetToPublic notice:', e);
+    }
   }
 }
 
@@ -123,11 +131,20 @@ export const AppNavigator: React.FC = () => {
 
   React.useEffect(() => {
     if (navigationRef.isReady()) {
-      if (isAuthenticated) {
-        navigationRef.reset({
-          index: 0,
-          routes: [{ name: 'Main' }],
-        });
+      try {
+        if (isAuthenticated) {
+          navigationRef.reset({
+            index: 0,
+            routes: [{ name: 'Main' }],
+          });
+        } else {
+          navigationRef.reset({
+            index: 0,
+            routes: [{ name: 'PublicBooking' }],
+          });
+        }
+      } catch (e) {
+        console.warn('Navigation state sync notice:', e);
       }
     }
   }, [isAuthenticated]);
@@ -141,18 +158,9 @@ export const AppNavigator: React.FC = () => {
   }
 
   return (
-    <NavigationContainer
-      ref={navigationRef}
-      onReady={() => {
-        if (isAuthenticated) {
-          navigationRef.reset({
-            index: 0,
-            routes: [{ name: 'Main' }],
-          });
-        }
-      }}
-    >
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
+        initialRouteName={isAuthenticated ? 'Main' : 'PublicBooking'}
         screenOptions={{
           headerShown: false,
           headerStyle: { backgroundColor: colors.headerBg },
@@ -161,24 +169,15 @@ export const AppNavigator: React.FC = () => {
           headerBackTitleVisible: false,
         }}
       >
-        {!isAuthenticated ? (
-          <>
-            <Stack.Screen name="PublicBooking" component={PublicBookingScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="Main" component={MainTabs} />
-            <Stack.Screen name="MedicineStore" component={MedicineStoreScreen} options={{ headerShown: true, title: 'Medicine Store' }} />
-            <Stack.Screen name="Compounders" component={CompoundersScreen} options={{ headerShown: true, title: 'Compounders & Staff' }} />
-            <Stack.Screen name="Reports" component={ReportsScreen} options={{ headerShown: true, title: 'Patient Reports' }} />
-            <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: true, title: 'Messages' }} />
-            <Stack.Screen name="Referrals" component={ReferralsScreen} options={{ headerShown: true, title: 'Referrals' }} />
-            <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: true, title: 'Profile' }} />
-            <Stack.Screen name="PublicBooking" component={PublicBookingScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-          </>
-        )}
+        <Stack.Screen name="PublicBooking" component={PublicBookingScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Main" component={MainTabs} />
+        <Stack.Screen name="MedicineStore" component={MedicineStoreScreen} options={{ headerShown: true, title: 'Medicine Store' }} />
+        <Stack.Screen name="Compounders" component={CompoundersScreen} options={{ headerShown: true, title: 'Compounders & Staff' }} />
+        <Stack.Screen name="Reports" component={ReportsScreen} options={{ headerShown: true, title: 'Patient Reports' }} />
+        <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: true, title: 'Messages' }} />
+        <Stack.Screen name="Referrals" component={ReferralsScreen} options={{ headerShown: true, title: 'Referrals' }} />
+        <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: true, title: 'Profile' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

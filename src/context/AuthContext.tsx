@@ -48,10 +48,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Fetch fresh user profile in background
           try {
             const freshUser = await authApi.getCurrentUser();
-            setUser(freshUser);
-            await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(freshUser));
-          } catch (e) {
-            console.log('Background session check failed, using cached session:', e);
+            if (freshUser) {
+              setUser(freshUser);
+              await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(freshUser));
+            }
+          } catch {
+            // Keep using valid cached session without noisy logs on initial cold boot
           }
         }
       } catch (e) {

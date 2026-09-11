@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Share,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
@@ -120,6 +121,21 @@ export const PrescriptionPreviewModal: React.FC<Props> = ({
     }
   };
 
+  const handleShareWebLink = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const pId = appointment.patientId || appointment._id;
+    const webUrl = `https://novel.mkinfotrack.com/preview/${pId}`;
+    try {
+      await Share.share({
+        message: `Prescription link for ${patientName}: ${webUrl}`,
+        url: webUrl,
+        title: `Prescription - ${patientName}`,
+      });
+    } catch (e: any) {
+      Alert.alert('Share Notice', e?.message || 'Could not share web link');
+    }
+  };
+
   const patientName = appointment.name || appointment.patientName || 'Patient';
   const age = appointment.age || appointment.patientAge || '-';
   const gender = appointment.gender || appointment.patientGender || '-';
@@ -138,6 +154,13 @@ export const PrescriptionPreviewModal: React.FC<Props> = ({
                 <Text style={[styles.title, { color: colors.textPrimary }]}>Prescription Preview</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TouchableOpacity
+                  style={[styles.brandingBtn, { backgroundColor: colors.primarySoft, borderColor: colors.primaryMuted }]}
+                  onPress={handleShareWebLink}
+                >
+                  <Ionicons name="globe-outline" size={14} color={colors.primary} />
+                  <Text style={[styles.brandingBtnText, { color: colors.primary }]}>Web Link</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.brandingBtn, { backgroundColor: colors.goldSoft, borderColor: colors.goldBorder }]}
                   onPress={() => setIsSettingsOpen(true)}

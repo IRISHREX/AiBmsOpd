@@ -105,6 +105,7 @@ export interface AppointmentResultItem {
 
 export interface Appointment {
   _id: string;
+  patientId?: string;
   appointmentId?: string;
   patientName?: string;
   name?: string;
