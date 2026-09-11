@@ -16,6 +16,7 @@ import { UserRole } from '../types';
 import { colors } from '../theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { interactionUtils } from '../utils/interactionUtils';
+import { resetToMain } from '../navigation/AppNavigator';
 
 export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
   const { login, backendUrl, setCustomBackendUrl, isAuthenticated } = useAuth();
@@ -33,13 +34,9 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
   // Immediate redirect when authenticated
   React.useEffect(() => {
     if (isAuthenticated) {
-      if (navigation?.replace) {
-        navigation.replace('Main');
-      } else if (navigation?.navigate) {
-        navigation.navigate('Main');
-      }
+      resetToMain();
     }
-  }, [isAuthenticated, navigation]);
+  }, [isAuthenticated]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -52,11 +49,7 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
     try {
       await login(email.trim(), password, role);
       interactionUtils.playSuccess();
-      if (navigation?.replace) {
-        navigation.replace('Main');
-      } else if (navigation?.navigate) {
-        navigation.navigate('Main');
-      }
+      resetToMain();
     } catch (err: any) {
       const msg =
         err.response?.data?.message ||
@@ -73,11 +66,7 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
             setRole(alt);
             recovered = true;
             interactionUtils.playSuccess();
-            if (navigation?.replace) {
-              navigation.replace('Main');
-            } else if (navigation?.navigate) {
-              navigation.navigate('Main');
-            }
+            resetToMain();
             break;
           } catch (altErr) {
             // continue checking

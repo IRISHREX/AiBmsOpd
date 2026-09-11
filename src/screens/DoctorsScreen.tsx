@@ -307,15 +307,18 @@ export const DoctorsScreen: React.FC = () => {
             setIsAddDoctorOpen(true);
           }}
         >
-          <Ionicons name="person-add" size={16} color="#ffffff" style={{ marginRight: 6 }} />
-          <Text style={styles.addBtnText}>+ Add Doctor</Text>
+          <Ionicons name="person-add" size={16} color="#ffffff" style={{ marginRight: 5 }} />
+          <Text style={styles.addBtnText}>+ Add</Text>
         </TouchableOpacity>
       </View>
 
       {/* Capacity Section */}
       <View style={[styles.capacitySection, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Live OPD Capacity Checker</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="speedometer-outline" size={16} color={theme.gold} />
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>OPD Capacity</Text>
+          </View>
           {selectedDocId && (
             <TouchableOpacity onPress={() => { setSelectedDocId(null); setCapacityData(null); }}>
               <Text style={{ fontSize: 11, color: theme.primary, fontWeight: '700' }}>Clear</Text>
@@ -365,12 +368,26 @@ export const DoctorsScreen: React.FC = () => {
 
         {capacityData && (
           <View style={[styles.capacityResults, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-            <Text style={[styles.capacityResultText, { color: theme.textPrimary }]}>
-              Doctor: <Text style={{ fontWeight: '800', color: theme.primary }}>{capacityData.doctorName || 'Selected Doctor'}</Text>
-            </Text>
-            <Text style={[styles.capacityResultText, { color: theme.textSecondary, marginTop: 2 }]}>
-              Capacity: <Text style={{ fontWeight: '700' }}>{capacityData.totalCapacity || 25}</Text> | Booked: <Text style={{ fontWeight: '700', color: theme.danger }}>{capacityData.booked || 0}</Text> | Available: <Text style={{ fontWeight: '800', color: theme.success }}>{capacityData.available ?? 25}</Text>
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="medical" size={14} color={theme.primary} />
+              <Text style={[styles.capacityResultText, { color: theme.textPrimary, fontWeight: '800' }]}>
+                {capacityData.doctorName || 'Selected Doctor'}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Ionicons name="people-outline" size={13} color={theme.textMuted} />
+                <Text style={[styles.capacityResultText, { color: theme.textSecondary }]}>Cap: {capacityData.totalCapacity || 25}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Ionicons name="calendar-outline" size={13} color={theme.danger} />
+                <Text style={[styles.capacityResultText, { color: theme.danger, fontWeight: '700' }]}>Booked: {capacityData.booked || 0}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Ionicons name="checkmark-circle-outline" size={13} color={theme.success} />
+                <Text style={[styles.capacityResultText, { color: theme.success, fontWeight: '800' }]}>Avail: {capacityData.available ?? 25}</Text>
+              </View>
+            </View>
           </View>
         )}
 

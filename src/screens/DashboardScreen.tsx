@@ -103,10 +103,15 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
     >
       {/* Luxury Bluish & Goldish Header Banner */}
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>Welcome back,</Text>
-          <Text style={styles.userName}>{user?.name || 'Dr. Practitioner'}</Text>
-          <Text style={styles.hospitalSub}>BMS OPD Management Portal</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surfaceElevated, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1.5, borderColor: colors.gold }}>
+            <Ionicons name="person" size={22} color={colors.goldBright} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.greeting}>Welcome back,</Text>
+            <Text style={styles.userName}>{user?.name || 'Dr. Practitioner'}</Text>
+            <Text style={styles.hospitalSub}>BMS OPD Management</Text>
+          </View>
         </View>
         <View style={styles.roleBadge}>
           <Ionicons name="shield-checkmark" size={13} color={colors.goldBright} style={{ marginRight: 4 }} />
@@ -298,8 +303,31 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
                   : appt.status === 'Cancelled'
                   ? styles.statusCancelled
                   : styles.statusPending,
+                { flexDirection: 'row', alignItems: 'center' }
               ]}
             >
+              <Ionicons
+                name={
+                  appt.status === 'Completed'
+                    ? 'checkmark-circle'
+                    : appt.status === 'Cancelled'
+                    ? 'close-circle'
+                    : appt.status === 'Accepted'
+                    ? 'calendar'
+                    : 'hourglass-outline'
+                }
+                size={12}
+                color={
+                  appt.status === 'Completed'
+                    ? '#059669'
+                    : appt.status === 'Cancelled'
+                    ? '#dc2626'
+                    : appt.status === 'Accepted'
+                    ? '#0284c7'
+                    : '#d97706'
+                }
+                style={{ marginRight: 4 }}
+              />
               <Text style={styles.statusText}>{appt.status}</Text>
             </View>
           </View>

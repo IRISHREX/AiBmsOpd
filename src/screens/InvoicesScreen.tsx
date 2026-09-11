@@ -237,19 +237,31 @@ export const InvoicesScreen: React.FC = () => {
 
         <View style={styles.statsGrid}>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Total Invoices</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+              <Ionicons name="receipt-outline" size={12} color={colors.primaryLight} style={{ marginRight: 3 }} />
+              <Text style={styles.statLabel}>Invoices</Text>
+            </View>
             <Text style={styles.statValueBlue}>{stats.totalInvoices}</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Collected</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+              <Ionicons name="checkmark-circle-outline" size={12} color={colors.goldBright} style={{ marginRight: 3 }} />
+              <Text style={styles.statLabel}>Collected</Text>
+            </View>
             <Text style={styles.statValueGold}>₹{stats.totalCollected}</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Pending Due</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+              <Ionicons name="alert-circle-outline" size={12} color="#f59e0b" style={{ marginRight: 3 }} />
+              <Text style={styles.statLabel}>Due</Text>
+            </View>
             <Text style={styles.statValueAmber}>₹{stats.pendingAmount}</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Unsettled</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+              <Ionicons name="time-outline" size={12} color="#f87171" style={{ marginRight: 3 }} />
+              <Text style={styles.statLabel}>Unsettled</Text>
+            </View>
             <Text style={styles.statValueUnsettled}>{stats.pendingCount}</Text>
           </View>
         </View>
@@ -259,15 +271,26 @@ export const InvoicesScreen: React.FC = () => {
       <View style={styles.filterRow}>
         {(['All', 'Pending', 'Paid'] as const).map((filter) => {
           const isActive = selectedFilter === filter;
+          const iconName =
+            filter === 'All'
+              ? 'list'
+              : filter === 'Pending'
+              ? 'time-outline'
+              : 'checkmark-circle';
           return (
             <TouchableOpacity
               key={filter}
-              style={[styles.filterTab, isActive && styles.filterTabActive]}
+              style={[styles.filterTab, isActive && styles.filterTabActive, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
               onPress={() => {
                 interactionUtils.playClick();
                 setSelectedFilter(filter);
               }}
             >
+              <Ionicons
+                name={iconName}
+                size={13}
+                color={isActive ? colors.textWhite : colors.textSecondary}
+              />
               <Text style={[styles.filterTabText, isActive && styles.filterTabTextActive]}>
                 {filter} {filter === 'Pending' ? `(${stats.pendingCount})` : ''}
               </Text>
@@ -424,8 +447,8 @@ export const InvoicesScreen: React.FC = () => {
                         <ActivityIndicator size="small" color={colors.textWhite} />
                       ) : (
                         <>
-                          <Ionicons name="cash-outline" size={15} color={colors.textWhite} style={{ marginRight: 5 }} />
-                          <Text style={styles.btnSettleText}>Collect Payment</Text>
+                          <Ionicons name="cash-outline" size={15} color={colors.textWhite} style={{ marginRight: 4 }} />
+                          <Text style={styles.btnSettleText}>Pay (₹{Math.max(0, total - paid)})</Text>
                         </>
                       )}
                     </TouchableOpacity>
@@ -435,7 +458,7 @@ export const InvoicesScreen: React.FC = () => {
                     onPress={() => handleDelete(item._id)}
                   >
                     <Ionicons name="trash-outline" size={14} color={colors.danger} />
-                    <Text style={styles.btnDeleteText}>Delete</Text>
+                    <Text style={styles.btnDeleteText}>Del</Text>
                   </TouchableOpacity>
                 </View>
               </View>

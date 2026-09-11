@@ -23,6 +23,7 @@ import { interactionUtils } from '../utils/interactionUtils';
 import { useTheme } from '../context/ThemeContext';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import { resetToMain } from '../navigation/AppNavigator';
 
 const APPLICANT_TYPES = [
   'Self (Patient)',
@@ -204,14 +205,14 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
             onPress={() => {
               interactionUtils.playClick();
               if (isAuthenticated) {
-                navigation.navigate('Main');
+                resetToMain();
               } else {
                 navigation.navigate('Login');
               }
             }}
           >
-            <Ionicons name={isAuthenticated ? "grid-outline" : "log-in-outline"} size={17} color="#ffffff" style={{ marginRight: 6 }} />
-            <Text style={styles.loginBtnText}>{isAuthenticated ? "Staff Dashboard" : "Staff Login"}</Text>
+            <Ionicons name={isAuthenticated ? "home" : "log-in-outline"} size={17} color="#ffffff" style={{ marginRight: 6 }} />
+            <Text style={styles.loginBtnText}>{isAuthenticated ? "Dashboard" : "Staff Login"}</Text>
           </TouchableOpacity>
 
           <View style={styles.headerRightActions}>

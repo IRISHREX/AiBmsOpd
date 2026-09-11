@@ -16,6 +16,7 @@ import { authApi } from '../api/auth';
 import { apiClient } from '../api/client';
 import { ThemeSelector } from '../components/ThemeSelector';
 import { PrescriptionSettingsModal } from '../components/PrescriptionSettingsModal';
+import { resetToPublic } from '../navigation/AppNavigator';
 
 export const ProfileScreen: React.FC = () => {
   const { user, logout, backendUrl, setCustomBackendUrl } = useAuth();
@@ -82,7 +83,13 @@ export const ProfileScreen: React.FC = () => {
       {
         text: 'Sign Out',
         style: 'destructive',
-        onPress: logout,
+        onPress: async () => {
+          try {
+            await logout();
+          } finally {
+            resetToPublic();
+          }
+        },
       },
     ]);
   };

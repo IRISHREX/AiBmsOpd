@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeSelector } from '../components/ThemeSelector';
 import { PrescriptionSettingsModal } from '../components/PrescriptionSettingsModal';
+import { resetToPublic } from '../navigation/AppNavigator';
 
 export const MenuScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { user, logout } = useAuth();
@@ -73,7 +74,13 @@ export const MenuScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
       <TouchableOpacity
         style={[styles.logoutBtn, { backgroundColor: colors.dangerSoft, borderColor: colors.dangerBorder }]}
-        onPress={logout}
+        onPress={async () => {
+          try {
+            await logout();
+          } finally {
+            resetToPublic();
+          }
+        }}
       >
         <Ionicons name="log-out-outline" size={18} color={colors.danger} style={{ marginRight: 6 }} />
         <Text style={[styles.logoutBtnText, { color: colors.danger }]}>Log Out</Text>

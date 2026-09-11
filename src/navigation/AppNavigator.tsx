@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -97,9 +97,40 @@ const MainTabs = () => {
   );
 };
 
+export const navigationRef = createNavigationContainerRef<any>();
+
+export function resetToMain() {
+  if (navigationRef.isReady()) {
+    navigationRef.reset({
+      index: 0,
+      routes: [{ name: 'Main' }],
+    });
+  }
+}
+
+export function resetToPublic() {
+  if (navigationRef.isReady()) {
+    navigationRef.reset({
+      index: 0,
+      routes: [{ name: 'PublicBooking' }],
+    });
+  }
+}
+
 export const AppNavigator: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const { colors } = useTheme();
+
+  React.useEffect(() => {
+    if (navigationRef.isReady()) {
+      if (isAuthenticated) {
+        navigationRef.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        });
+      }
+    }
+  }, [isAuthenticated]);
 
   if (isLoading) {
     return (
@@ -110,7 +141,17 @@ export const AppNavigator: React.FC = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => {
+        if (isAuthenticated) {
+          navigationRef.reset({
+            index: 0,
+            routes: [{ name: 'Main' }],
+          });
+        }
+      }}
+    >
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
@@ -135,6 +176,7 @@ export const AppNavigator: React.FC = () => {
             <Stack.Screen name="Referrals" component={ReferralsScreen} options={{ headerShown: true, title: 'Referrals' }} />
             <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: true, title: 'Profile' }} />
             <Stack.Screen name="PublicBooking" component={PublicBookingScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Login" component={LoginScreen} />
           </>
         )}
       </Stack.Navigator>
