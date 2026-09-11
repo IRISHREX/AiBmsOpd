@@ -294,6 +294,54 @@ export const PrescriptionsScreen: React.FC = () => {
     setPrescriptionList(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleRepeatLastRx = () => {
+    if (!selectedApptId) {
+      Alert.alert('Notice', 'Please select a patient appointment first.');
+      return;
+    }
+    const currentAppt = appointments.find((a) => a._id === selectedApptId);
+    const patName = (currentAppt?.name || currentAppt?.patientName || '').toLowerCase().trim();
+
+    // Find previous appointment of this patient or recent appointment with medicines
+    const pastApptWithRx =
+      appointments.find(
+        (a) =>
+          a._id !== selectedApptId &&
+          (a.name || a.patientName || '').toLowerCase().trim() === patName &&
+          a.result &&
+          a.result[0]?.medicineAdvice &&
+          a.result[0].medicineAdvice.length > 0
+      ) ||
+      appointments.find(
+        (a) => a._id !== selectedApptId && a.result && a.result[0]?.medicineAdvice && a.result[0].medicineAdvice.length > 0
+      );
+
+    if (pastApptWithRx?.result?.[0]?.medicineAdvice) {
+      const pastMeds = pastApptWithRx.result[0].medicineAdvice;
+      setPrescriptionList((prev) => [
+        ...prev,
+        ...pastMeds.map((m: any) => ({
+          name: m.name || '',
+          dosage: m.dose || '1 Tab',
+          frequency: m.frequency || '1-0-1',
+          duration: m.duration || '5 Days',
+          instructions: m.notes,
+        })),
+      ]);
+      if (pastApptWithRx.result[0].advice) {
+        if (typeof pastApptWithRx.result[0].advice === 'string') {
+          setGeneralAdvice(pastApptWithRx.result[0].advice);
+        } else if (pastApptWithRx.result[0].advice.medication) {
+          setGeneralAdvice(pastApptWithRx.result[0].advice.medication);
+        }
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Repeat Rx Applied', `Repeated ${pastMeds.length} medicines from previous visit.`);
+    } else {
+      Alert.alert('No Past Rx', 'No previous prescription found to repeat.');
+    }
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Appointment Selector & Quick Action Bar */}
@@ -301,6 +349,14 @@ export const PrescriptionsScreen: React.FC = () => {
         <View style={styles.headerTopRow}>
           <Text style={[styles.headerText, { color: colors.textPrimary }]}>Select Appointment:</Text>
           <View style={styles.topActionBtns}>
+            <TouchableOpacity
+              style={[styles.miniBtn, { backgroundColor: colors.primarySoft, borderColor: colors.primaryMuted }]}
+              onPress={handleRepeatLastRx}
+            >
+              <Ionicons name="repeat-outline" size={13} color={colors.primary} />
+              <Text style={[styles.miniBtnText, { color: colors.primary }]}>Repeat Rx</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.miniBtn, { backgroundColor: colors.goldSoft, borderColor: colors.goldBorder }]}
               onPress={() => setIsTemplateModalOpen(true)}
@@ -310,7 +366,7 @@ export const PrescriptionsScreen: React.FC = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.miniBtn, { backgroundColor: colors.primarySoft, borderColor: colors.primaryMuted }]}
+              style={[styles.miniBtn, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
               onPress={() => {
                 if (!selectedApptId) {
                   Alert.alert('Notice', 'Please select an appointment first to preview prescription.');
@@ -319,8 +375,8 @@ export const PrescriptionsScreen: React.FC = () => {
                 setIsPreviewModalOpen(true);
               }}
             >
-              <Ionicons name="eye-outline" size={13} color={colors.primary} />
-              <Text style={[styles.miniBtnText, { color: colors.primary }]}>Preview</Text>
+              <Ionicons name="eye-outline" size={13} color={colors.textPrimary} />
+              <Text style={[styles.miniBtnText, { color: colors.textPrimary }]}>Preview</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -389,7 +445,41 @@ export const PrescriptionsScreen: React.FC = () => {
       >
         {/* Vitals Tab */}
         {activeTab === 'Vitals' && (
-          <View style={styles.grid}>
+          <>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 2 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="pulse" size={16} color={colors.primary} />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: colors.textPrimary }}>Vitals & Measurements</Text>
+              </View>
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.goldSoft,
+                  borderColor: colors.goldBorder,
+                  borderWidth: 1,
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 20,
+                  gap: 4,
+                }}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setVitals((prev) => ({
+                    ...prev,
+                    BP: '120/80',
+                    PR: '72',
+                    SPO2: '98',
+                    Temp: '98.6',
+                  }));
+                }}
+              >
+                <Ionicons name="flash" size={13} color={colors.goldDark} />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: colors.goldDark }}>Normal Vitals</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.grid}>
             {(Object.keys(vitals) as Array<keyof typeof vitals>).map((k) => {
               const cfg = VITAL_CONFIG[k];
               const warning = getVitalWarning(k, vitals[k]);
@@ -417,7 +507,8 @@ export const PrescriptionsScreen: React.FC = () => {
                 </View>
               );
             })}
-          </View>
+            </View>
+          </>
         )}
 
         {/* ObGyn Tab */}
@@ -542,6 +633,80 @@ export const PrescriptionsScreen: React.FC = () => {
                 </View>
               ))
             )}
+
+            {/* Advice & Quick Follow-Up Card */}
+            <View style={{ backgroundColor: colors.cardBg, borderColor: colors.border, marginTop: 14, marginBottom: 16, padding: 14, borderRadius: 14, borderWidth: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                <Ionicons name="chatbox-ellipses-outline" size={16} color={colors.primary} />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: colors.textPrimary }}>Clinical Advice & Diet</Text>
+              </View>
+
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.surfaceElevated, borderColor: colors.borderLight, color: colors.textPrimary, marginBottom: 8 }]}
+                placeholder="General Advice (e.g. Drink plenty of water, rest)..."
+                placeholderTextColor={colors.textMuted}
+                value={generalAdvice}
+                onChangeText={setGeneralAdvice}
+              />
+
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.surfaceElevated, borderColor: colors.borderLight, color: colors.textPrimary, marginBottom: 12 }]}
+                placeholder="Diet Advice (e.g. Low sodium, avoid fried foods)..."
+                placeholderTextColor={colors.textMuted}
+                value={dietAdvice}
+                onChangeText={setDietAdvice}
+              />
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.goldDark} />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textPrimary }}>Follow-Up Date</Text>
+                </View>
+                {followUpDate ? (
+                  <TouchableOpacity onPress={() => setFollowUpDate('')}>
+                    <Text style={{ fontSize: 11, color: colors.danger, fontWeight: '700' }}>Clear</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+
+              {/* Quick Follow-up Chips */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                {[
+                  { label: '+3 Days', days: 3 },
+                  { label: '+7 Days', days: 7 },
+                  { label: '+14 Days', days: 14 },
+                  { label: '+1 Month', days: 30 },
+                ].map((preset) => (
+                  <TouchableOpacity
+                    key={preset.label}
+                    style={{
+                      backgroundColor: colors.goldSoft,
+                      borderColor: colors.goldBorder,
+                      borderWidth: 1,
+                      paddingHorizontal: 9,
+                      paddingVertical: 5,
+                      borderRadius: 12,
+                    }}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      const d = new Date();
+                      d.setDate(d.getDate() + preset.days);
+                      setFollowUpDate(d.toISOString().split('T')[0]);
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: colors.goldDark }}>{preset.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.surfaceElevated, borderColor: colors.borderLight, color: colors.textPrimary }]}
+                placeholder="Follow-Up Date (YYYY-MM-DD)"
+                placeholderTextColor={colors.textMuted}
+                value={followUpDate}
+                onChangeText={setFollowUpDate}
+              />
+            </View>
           </View>
         )}
       </ScrollView>
@@ -589,6 +754,27 @@ export const PrescriptionsScreen: React.FC = () => {
             <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>Configure Dosage Instructions</Text>
 
             <Text style={[styles.modalLabel, { color: colors.textPrimary }]}>Dosage</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+              {['1 Tab', '2 Tabs', '5 ml', '10 ml', '1 Cap'].map((d) => (
+                <TouchableOpacity
+                  key={d}
+                  style={{
+                    backgroundColor: medDose === d ? colors.primarySoft : colors.surfaceElevated,
+                    borderColor: medDose === d ? colors.primary : colors.border,
+                    borderWidth: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                  }}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setMedDose(d);
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: medDose === d ? colors.primary : colors.textSecondary }}>{d}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.textPrimary }]}
               value={medDose}
@@ -597,7 +783,34 @@ export const PrescriptionsScreen: React.FC = () => {
               placeholderTextColor={colors.textMuted}
             />
 
-            <Text style={[styles.modalLabel, { color: colors.textPrimary }]}>Frequency</Text>
+            <Text style={[styles.modalLabel, { color: colors.textPrimary, marginTop: 8 }]}>Frequency</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+              {[
+                { label: '1-0-1 (After Food)', val: '1-0-1 (After Food)' },
+                { label: '1-1-1 (After Food)', val: '1-1-1 (After Food)' },
+                { label: '1-0-0 (Morning)', val: '1-0-0 (Before Food)' },
+                { label: '0-0-1 (Night)', val: '0-0-1 (At Bedtime)' },
+                { label: 'SOS', val: 'SOS (As Needed)' },
+              ].map((f) => (
+                <TouchableOpacity
+                  key={f.val}
+                  style={{
+                    backgroundColor: medFreq === f.val ? colors.goldSoft : colors.surfaceElevated,
+                    borderColor: medFreq === f.val ? colors.goldBorder : colors.border,
+                    borderWidth: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                  }}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setMedFreq(f.val);
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: medFreq === f.val ? colors.goldDark : colors.textSecondary }}>{f.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.textPrimary }]}
               value={medFreq}
@@ -606,7 +819,28 @@ export const PrescriptionsScreen: React.FC = () => {
               placeholderTextColor={colors.textMuted}
             />
 
-            <Text style={[styles.modalLabel, { color: colors.textPrimary }]}>Duration</Text>
+            <Text style={[styles.modalLabel, { color: colors.textPrimary, marginTop: 8 }]}>Duration</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+              {['3 Days', '5 Days', '7 Days', '14 Days', '1 Month'].map((dur) => (
+                <TouchableOpacity
+                  key={dur}
+                  style={{
+                    backgroundColor: medDuration === dur ? colors.primarySoft : colors.surfaceElevated,
+                    borderColor: medDuration === dur ? colors.primary : colors.border,
+                    borderWidth: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                  }}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setMedDuration(dur);
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: medDuration === dur ? colors.primary : colors.textSecondary }}>{dur}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.surfaceElevated, borderColor: colors.border, color: colors.textPrimary }]}
               value={medDuration}

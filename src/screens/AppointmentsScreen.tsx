@@ -229,7 +229,10 @@ export const AppointmentsScreen: React.FC = () => {
     setNewDepartment(item.department || 'Pediatrics');
     if (item.doctorId) setSelectedDoctorId(item.doctorId);
     setNewHasVisited(true);
-    setStep(1);
+    const nextDate = new Date();
+    nextDate.setDate(nextDate.getDate() + 7);
+    setNewApptDate(nextDate.toISOString().split('T')[0]);
+    setStep(2); // Seamlessly jump to Step 2 for quick booking without re-entering demographics
     setIsCreateModalOpen(true);
   };
 
@@ -650,8 +653,8 @@ export const AppointmentsScreen: React.FC = () => {
                     style={[styles.cardBtn, styles.btnNewAppt]}
                     onPress={() => handleBookNewForPatient(item)}
                   >
-                    <Ionicons name="add-circle" size={14} color="#b45309" />
-                    <Text style={styles.btnTextNewAppt}> New Appt</Text>
+                    <Ionicons name="repeat" size={14} color="#b45309" />
+                    <Text style={styles.btnTextNewAppt}> Repeat Appt</Text>
                   </TouchableOpacity>
                 )}
 
@@ -819,6 +822,38 @@ export const AppointmentsScreen: React.FC = () => {
               onChangeText={setNewPrice}
             />
 
+            {/* Quick Date Chips */}
+            <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textSecondary, marginBottom: 4 }}>Quick Date Selection</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {[
+                { label: 'Today', days: 0 },
+                { label: 'Tomorrow', days: 1 },
+                { label: '+7 Days', days: 7 },
+                { label: '+14 Days', days: 14 },
+                { label: '+1 Mo', days: 30 },
+              ].map((p) => (
+                <TouchableOpacity
+                  key={p.label}
+                  style={{
+                    backgroundColor: colors.primarySoft,
+                    borderColor: colors.primaryMuted,
+                    borderWidth: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                  }}
+                  onPress={() => {
+                    interactionUtils.playClick();
+                    const d = new Date();
+                    d.setDate(d.getDate() + p.days);
+                    setNewApptDate(d.toISOString().split('T')[0]);
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary }}>{p.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
               <TouchableOpacity
                 style={[styles.modalInput, { flex: 1, justifyContent: 'center' }]}
@@ -866,6 +901,30 @@ export const AppointmentsScreen: React.FC = () => {
                   }}
                 />
               )}
+            </View>
+
+            {/* Quick Slot Chips */}
+            <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textSecondary, marginBottom: 4 }}>Quick Slot Time</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {['09:30 AM', '11:00 AM', '02:30 PM', '05:30 PM', '07:00 PM'].map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={{
+                    backgroundColor: newSlotTime === s ? colors.goldSoft : '#f1f5f9',
+                    borderColor: newSlotTime === s ? colors.goldBorder : '#cbd5e1',
+                    borderWidth: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                  }}
+                  onPress={() => {
+                    interactionUtils.playClick();
+                    setNewSlotTime(s);
+                  }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: newSlotTime === s ? colors.goldDark : '#475569' }}>{s}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
 
             <TextInput

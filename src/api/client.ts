@@ -12,7 +12,7 @@ export const USER_DATA_KEY = '@bms_opd_user';
 
 export const apiClient: AxiosInstance = axios.create({
   baseURL: DEFAULT_API_BASE_URL,
-  timeout: 15000,
+  timeout: 45000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -38,10 +38,30 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor: handle 401 unauthenticated
+// Interceptor: handle transient network errors (cold start retry) & 401 unauthenticated
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const config = error.config as any;
+    if (config) {
+      config._retryCount = config._retryCount || 0;
+    }
+
+    const isTransient =
+      error.code === 'ECONNABORTED' ||
+      !error.response ||
+      error.message?.toLowerCase().includes('network error') ||
+      error.response?.status === 502 ||
+      error.response?.status === 503 ||
+      error.response?.status === 504;
+
+    if (isTransient && config && config._retryCount < 2) {
+      config._retryCount += 1;
+      const delayMs = config._retryCount * 1200;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      return apiClient(config);
+    }
+
     if (error.response?.status === 401) {
       try {
         await AsyncStorage.removeItem(AUTH_TOKEN_KEY);

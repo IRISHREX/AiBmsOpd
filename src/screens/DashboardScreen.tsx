@@ -274,7 +274,15 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
         </View>
       ) : (
         appointments.slice(0, 5).map((appt) => (
-          <View key={appt._id} style={styles.appointmentCard}>
+          <TouchableOpacity
+            key={appt._id}
+            style={styles.appointmentCard}
+            activeOpacity={0.7}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              navigation.navigate('Appointments');
+            }}
+          >
             <View style={styles.appointmentMain}>
               <Text style={styles.patientName}>{appt.name || appt.patientName || 'Patient'}</Text>
               <View style={styles.patientDetailsRow}>
@@ -330,7 +338,7 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
               />
               <Text style={styles.statusText}>{appt.status}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         ))
       )}
     </ScrollView>
