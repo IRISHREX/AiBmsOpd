@@ -1,7 +1,7 @@
 # Automated Release Script for BMS-OPD Android APK
 # Usage: npm run release OR powershell -ExecutionPolicy Bypass -File scripts\release.ps1
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $ProjectRoot = "c:\PROJECTS\AiBmsOpd"
 Set-Location $ProjectRoot
 
