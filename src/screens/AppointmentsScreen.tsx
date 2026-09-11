@@ -131,6 +131,108 @@ export const AppointmentsScreen: React.FC = () => {
   const [rescheduleSlot, setRescheduleSlot] = useState('');
   const [showRescheduleDatePicker, setShowRescheduleDatePicker] = useState(false);
 
+  // Edit Appointment Modal State
+  const [editModalAppt, setEditModalAppt] = useState<Appointment | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editAge, setEditAge] = useState('');
+  const [editGender, setEditGender] = useState('Male');
+  const [editAddress, setEditAddress] = useState('');
+  const [editDoctorId, setEditDoctorId] = useState('');
+  const [editDepartment, setEditDepartment] = useState('General Medicine');
+  const [editDate, setEditDate] = useState('');
+  const [editSlot, setEditSlot] = useState('10:00 AM');
+  const [editPrice, setEditPrice] = useState('500');
+  const [editPaymentStatus, setEditPaymentStatus] = useState('Due');
+  const [editStatus, setEditStatus] = useState('Pending');
+  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+  const [isUpdatingAppt, setIsUpdatingAppt] = useState(false);
+
+  const openEditModal = (item: Appointment) => {
+    interactionUtils.playClick();
+    setEditModalAppt(item);
+    setEditName(item.name || item.patientName || '');
+    setEditPhone(item.phone || item.patientPhone || '');
+    setEditAge(item.age?.toString() || item.patientAge?.toString() || '');
+    setEditGender((item.gender || item.patientGender || 'Male') as any);
+    setEditAddress(item.address || item.patientAddress || '');
+    setEditDoctorId(item.doctorId || (doctors[0]?._id ?? ''));
+    setEditDepartment(item.department || 'General Medicine');
+    const dStr = item.appointmentDate || (item.appointment_date ? item.appointment_date.split('T')[0] : new Date().toISOString().split('T')[0]);
+    setEditDate(dStr);
+    setEditSlot(item.slotTime || '10:00 AM');
+    const matched = doctors.find((d) => d._id === item.doctorId);
+    const fee = (item.price && Number(item.price) > 0) ? item.price : (matched?.visitingFee || matched?.consultationFee || 500);
+    setEditPrice(fee.toString());
+    setEditPaymentStatus(item.paymentStatus || 'Due');
+    setEditStatus(item.status || 'Pending');
+  };
+
+  const handleSaveEditAppointment = async () => {
+    if (!editModalAppt) return;
+    if (!editName.trim() || !editPhone.trim()) {
+      Alert.alert('Required Fields', 'Patient name and contact phone are required.');
+      return;
+    }
+
+    try {
+      setIsUpdatingAppt(true);
+      const payload: any = {
+        name: editName.trim(),
+        patientName: editName.trim(),
+        phone: editPhone.trim(),
+        patientPhone: editPhone.trim(),
+        age: editAge ? Number(editAge) : undefined,
+        patientAge: editAge ? Number(editAge) : undefined,
+        gender: editGender,
+        patientGender: editGender,
+        address: editAddress.trim(),
+        patientAddress: editAddress.trim(),
+        doctorId: editDoctorId,
+        department: editDepartment,
+        appointment_date: new Date(editDate).toISOString(),
+        appointmentDate: editDate,
+        slotTime: editSlot,
+        price: editPrice ? Number(editPrice) : 500,
+        paymentStatus: editPaymentStatus,
+        status: editStatus,
+      };
+
+      const res = await appointmentsApi.update(editModalAppt._id, payload);
+      interactionUtils.playSuccess();
+
+      const updatedItem: Appointment = res.appointment || {
+        ...editModalAppt,
+        ...payload,
+      };
+
+      setAppointments((prev) =>
+        prev.map((a) => (a._id === editModalAppt._id ? { ...a, ...updatedItem } : a))
+      );
+
+      setEditModalAppt(null);
+      Alert.alert('Success', 'Appointment updated successfully!');
+    } catch (e: any) {
+      Alert.alert('Update Failed', e.response?.data?.message || e.message || 'Could not update appointment');
+    } finally {
+      setIsUpdatingAppt(false);
+    }
+  };
+
+  const handleBookNewForPatient = (item: Appointment) => {
+    interactionUtils.playClick();
+    setNewPatientName(item.name || item.patientName || '');
+    setNewPatientPhone(item.phone || item.patientPhone || '');
+    setNewPatientAge(item.age?.toString() || item.patientAge?.toString() || '');
+    setNewPatientGender((item.gender || item.patientGender || 'Male') as any);
+    setNewAddress(item.address || item.patientAddress || '');
+    setNewDepartment(item.department || 'Pediatrics');
+    if (item.doctorId) setSelectedDoctorId(item.doctorId);
+    setNewHasVisited(true);
+    setStep(1);
+    setIsCreateModalOpen(true);
+  };
+
   const fetchData = async () => {
     try {
       const [appts, docs] = await Promise.all([
@@ -195,6 +297,16 @@ export const AppointmentsScreen: React.FC = () => {
   };
 
   const handlePaymentStatusChange = async (id: string, newPaymentStatus: string) => {
+    const currentAppt = appointments.find((a) => a._id === id);
+    if (
+      currentAppt?.status === 'Completed' &&
+      (currentAppt.paymentStatus === 'Paid' || currentAppt.paymentStatus === 'Accepted') &&
+      newPaymentStatus === 'Due'
+    ) {
+      Alert.alert('Payment Settled', 'A completed appointment that is already Paid cannot be marked as Due.');
+      return;
+    }
+
     const validStatus = newPaymentStatus as Appointment['paymentStatus'];
     try {
       await appointmentsApi.update(id, { paymentStatus: validStatus });
@@ -414,7 +526,7 @@ export const AppointmentsScreen: React.FC = () => {
                 <Ionicons name="cash-outline" size={14} color={colors.gold} style={{ marginRight: 4, marginTop: 1 }} />
                 <Text style={styles.detailLabel}>Fee / Price:</Text>
                 <Text style={[styles.detailValue, { color: colors.goldDark, fontWeight: '700' }]}>
-                  ₹{item.price ?? 500}
+                  ₹{(item.price && Number(item.price) > 0) ? Number(item.price) : (doctors.find((d) => d._id === item.doctorId)?.visitingFee || 500)}
                 </Text>
               </View>
 
@@ -431,12 +543,19 @@ export const AppointmentsScreen: React.FC = () => {
               {/* Action Buttons */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 }}>
                 <View style={{ flex: 1 }}>
-                  <DropdownPicker 
-                    label="Payment" 
-                    value={item.paymentStatus || 'Due'} 
-                    options={[{label:'Paid', value:'Paid'}, {label:'Due', value:'Due'}]} 
-                    onSelect={(v) => handlePaymentStatusChange(item._id, v)} 
-                  />
+                  {item.status === 'Completed' && (item.paymentStatus === 'Paid' || item.paymentStatus === 'Accepted') ? (
+                    <View style={styles.paidBadgeBox}>
+                      <Ionicons name="checkmark-done-circle" size={16} color="#059669" />
+                      <Text style={styles.paidBadgeText}>Paid & Settled</Text>
+                    </View>
+                  ) : (
+                    <DropdownPicker 
+                      label="Payment" 
+                      value={item.paymentStatus || 'Due'} 
+                      options={[{label:'Paid', value:'Paid'}, {label:'Due', value:'Due'}]} 
+                      onSelect={(v) => handlePaymentStatusChange(item._id, v)} 
+                    />
+                  )}
                 </View>
                 <TouchableOpacity 
                   style={[
@@ -458,26 +577,46 @@ export const AppointmentsScreen: React.FC = () => {
               </View>
 
               <View style={styles.cardActions}>
-                {item.status !== 'Completed' && (
+                {/* Always provide Edit option */}
+                <TouchableOpacity
+                  style={[styles.cardBtn, styles.btnEdit]}
+                  onPress={() => openEditModal(item)}
+                >
+                  <Ionicons name="create-outline" size={14} color="#0284c7" />
+                  <Text style={styles.btnTextEdit}> Edit</Text>
+                </TouchableOpacity>
+
+                {item.status !== 'Completed' ? (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.cardBtn, styles.btnSuccess]}
+                      onPress={() => handleStatusChange(item._id, 'Completed')}
+                    >
+                      <Ionicons name="checkmark-circle-outline" size={14} color="#059669" />
+                      <Text style={styles.btnTextSuccess}> Complete</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.cardBtn, styles.btnSecondary]}
+                      onPress={() => {
+                        setRescheduleModalAppt(item);
+                        setRescheduleDate(item.appointmentDate || item.appointment_date?.split('T')[0] || '');
+                        setRescheduleSlot(item.slotTime || '11:00 AM');
+                      }}
+                    >
+                      <Ionicons name="time-outline" size={14} color="#475569" />
+                      <Text style={styles.btnTextSecondary}> Reschedule</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
                   <TouchableOpacity
-                    style={[styles.cardBtn, styles.btnSuccess]}
-                    onPress={() => handleStatusChange(item._id, 'Completed')}
+                    style={[styles.cardBtn, styles.btnNewAppt]}
+                    onPress={() => handleBookNewForPatient(item)}
                   >
-                    <Ionicons name="checkmark-circle-outline" size={14} color="#059669" />
-                    <Text style={styles.btnTextSuccess}> Complete</Text>
+                    <Ionicons name="add-circle-outline" size={14} color="#b45309" />
+                    <Text style={styles.btnTextNewAppt}> Book New Appt</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity
-                  style={[styles.cardBtn, styles.btnSecondary]}
-                  onPress={() => {
-                    setRescheduleModalAppt(item);
-                    setRescheduleDate(item.appointmentDate || item.appointment_date?.split('T')[0] || '');
-                    setRescheduleSlot(item.slotTime || '11:00 AM');
-                  }}
-                >
-                  <Ionicons name="time-outline" size={14} color="#475569" />
-                  <Text style={styles.btnTextSecondary}> Reschedule</Text>
-                </TouchableOpacity>
+
                 <TouchableOpacity
                   style={[styles.cardBtn, styles.btnDanger]}
                   onPress={() => handleDelete(item._id)}
@@ -781,6 +920,225 @@ export const AppointmentsScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Edit Appointment Modal */}
+      <Modal visible={!!editModalAppt} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '92%' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={styles.modalTitle}>Edit Appointment</Text>
+              <TouchableOpacity onPress={() => setEditModalAppt(null)}>
+                <Ionicons name="close-circle-outline" size={24} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={[{ key: 'form' }]}
+              keyExtractor={(i) => i.key}
+              showsVerticalScrollIndicator={false}
+              renderItem={() => (
+                <View>
+                  <Text style={styles.modalLabel}>Patient Name *</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Patient Name"
+                    placeholderTextColor="#94a3b8"
+                  />
+
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.modalLabel}>Phone *</Text>
+                      <TextInput
+                        style={styles.modalInput}
+                        value={editPhone}
+                        onChangeText={setEditPhone}
+                        placeholder="Phone Number"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="phone-pad"
+                      />
+                    </View>
+                    <View style={{ width: 80 }}>
+                      <Text style={styles.modalLabel}>Age</Text>
+                      <TextInput
+                        style={styles.modalInput}
+                        value={editAge}
+                        onChangeText={setEditAge}
+                        placeholder="Age"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+
+                  <Text style={styles.modalLabel}>Gender</Text>
+                  <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
+                    {['Male', 'Female', 'Others'].map((g) => (
+                      <TouchableOpacity
+                        key={g}
+                        style={[
+                          styles.doctorChip,
+                          editGender === g && { backgroundColor: colors.goldSoft, borderColor: colors.gold },
+                        ]}
+                        onPress={() => setEditGender(g)}
+                      >
+                        <Text style={[styles.doctorChipText, editGender === g && { color: colors.goldDark, fontWeight: '700' }]}>
+                          {g}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={styles.modalLabel}>Residential Address</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    value={editAddress}
+                    onChangeText={setEditAddress}
+                    placeholder="Address"
+                    placeholderTextColor="#94a3b8"
+                  />
+
+                  <Text style={styles.modalLabel}>Assigned Doctor</Text>
+                  <View style={styles.doctorPickerContainer}>
+                    {doctors.map((doc) => {
+                      const isSelected = editDoctorId === doc._id;
+                      return (
+                        <TouchableOpacity
+                          key={doc._id}
+                          style={[styles.doctorChip, isSelected && styles.doctorChipActive]}
+                          onPress={() => {
+                            setEditDoctorId(doc._id);
+                            const fee = doc.visitingFee || doc.consultationFee;
+                            if (fee !== undefined) {
+                              setEditPrice(fee.toString());
+                            }
+                            const dept = doc.doctorDepartment || doc.department;
+                            if (dept) {
+                              setEditDepartment(dept);
+                            }
+                          }}
+                        >
+                          <Text style={[styles.doctorChipText, isSelected && styles.doctorChipTextActive]}>
+                            {doc.name || `Dr. ${doc.firstName || ''} ${doc.lastName || ''}`}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.modalLabel}>Date</Text>
+                      <TouchableOpacity
+                        style={[styles.modalInput, { justifyContent: 'center' }]}
+                        onPress={() => setShowEditDatePicker(true)}
+                      >
+                        <Text style={{ color: editDate ? '#0f172a' : '#94a3b8' }}>
+                          {editDate || 'Select Date'}
+                        </Text>
+                      </TouchableOpacity>
+                      {showEditDatePicker && (
+                        <DateTimePicker
+                          value={new Date(editDate || Date.now())}
+                          mode="date"
+                          display="default"
+                          onChange={(event, date) => {
+                            setShowEditDatePicker(Platform.OS === 'ios');
+                            if (date) setEditDate(date.toISOString().split('T')[0]);
+                          }}
+                        />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.modalLabel}>Slot Time</Text>
+                      <TextInput
+                        style={styles.modalInput}
+                        value={editSlot}
+                        onChangeText={setEditSlot}
+                        placeholder="10:00 AM"
+                        placeholderTextColor="#94a3b8"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.modalLabel}>Consultation Fee (₹)</Text>
+                      <TextInput
+                        style={styles.modalInput}
+                        value={editPrice}
+                        onChangeText={setEditPrice}
+                        placeholder="500"
+                        placeholderTextColor="#94a3b8"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.modalLabel}>Payment Status</Text>
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        {['Due', 'Paid'].map((p) => (
+                          <TouchableOpacity
+                            key={p}
+                            style={[
+                              styles.doctorChip,
+                              { flex: 1, alignItems: 'center' },
+                              editPaymentStatus === p && { backgroundColor: p === 'Paid' ? '#ecfdf5' : '#fef2f2', borderColor: p === 'Paid' ? '#059669' : '#dc2626' },
+                            ]}
+                            onPress={() => setEditPaymentStatus(p)}
+                          >
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: editPaymentStatus === p ? (p === 'Paid' ? '#059669' : '#dc2626') : '#64748b' }}>
+                              {p}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+
+                  <Text style={styles.modalLabel}>Appointment Status</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                    {['Pending', 'Accepted', 'Completed', 'Cancelled', 'Rescheduled'].map((st) => (
+                      <TouchableOpacity
+                        key={st}
+                        style={[
+                          styles.doctorChip,
+                          editStatus === st && { backgroundColor: colors.primarySoft, borderColor: colors.primary },
+                        ]}
+                        onPress={() => setEditStatus(st)}
+                      >
+                        <Text style={[styles.doctorChipText, editStatus === st && { color: colors.primary, fontWeight: '800' }]}>
+                          {st}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <View style={styles.modalButtons}>
+                    <TouchableOpacity
+                      style={[styles.modalBtn, styles.modalBtnCancel]}
+                      onPress={() => setEditModalAppt(null)}
+                    >
+                      <Text style={styles.modalBtnCancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.modalBtn, styles.modalBtnConfirm]}
+                      onPress={handleSaveEditAppointment}
+                      disabled={isUpdatingAppt}
+                    >
+                      {isUpdatingAppt ? (
+                        <ActivityIndicator color="#ffffff" size="small" />
+                      ) : (
+                        <Text style={styles.modalBtnConfirmText}>Save Changes</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -984,6 +1342,38 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontSize: 12,
     fontWeight: '600',
+  },
+  btnEdit: {
+    backgroundColor: '#e0f2fe',
+  },
+  btnTextEdit: {
+    color: '#0284c7',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  btnNewAppt: {
+    backgroundColor: '#fef3c7',
+  },
+  btnTextNewAppt: {
+    color: '#b45309',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  paidBadgeBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+  },
+  paidBadgeText: {
+    color: '#059669',
+    fontSize: 12.5,
+    fontWeight: '800',
   },
   emptyContainer: {
     alignItems: 'center',

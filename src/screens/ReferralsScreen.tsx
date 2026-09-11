@@ -30,6 +30,7 @@ interface Referral {
   age?: number;
   gender?: string;
   applicantBy?: string;
+  applicantName?: string;
   applicantPhone?: string;
   targetDoctorId?: any;
   targetDoctorName?: string;
@@ -354,14 +355,42 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
                       </View>
                     </View>
 
-                    {/* Applicant By Badge */}
-                    <View style={[styles.applicantBadge, { backgroundColor: theme.goldSoft, borderColor: theme.goldBorder }]}>
-                      <Ionicons name="shield-checkmark-outline" size={11} color={theme.goldDark} />
-                      <Text style={[styles.applicantBadgeText, { color: theme.goldDark }]}>
-                        {item.applicantBy || 'Self'}
-                      </Text>
+                    {/* Urgency and Applicant Badge */}
+                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                      {item.urgency === 'emergency' && (
+                        <View style={[styles.applicantBadge, { backgroundColor: '#fee2e2', borderColor: '#fca5a5' }]}>
+                          <Ionicons name="alert-circle" size={12} color="#dc2626" />
+                          <Text style={[styles.applicantBadgeText, { color: "#dc2626", fontWeight: '800' }]}>
+                            EMERGENCY
+                          </Text>
+                        </View>
+                      )}
+                      {item.urgency === 'urgent' && (
+                        <View style={[styles.applicantBadge, { backgroundColor: '#fef3c7', borderColor: '#fde68a' }]}>
+                          <Ionicons name="warning-outline" size={12} color="#d97706" />
+                          <Text style={[styles.applicantBadgeText, { color: "#d97706", fontWeight: '800' }]}>
+                            Urgent
+                          </Text>
+                        </View>
+                      )}
+                      <View style={[styles.applicantBadge, { backgroundColor: theme.goldSoft, borderColor: theme.goldBorder }]}>
+                        <Ionicons name="shield-checkmark-outline" size={11} color={theme.goldDark} />
+                        <Text style={[styles.applicantBadgeText, { color: theme.goldDark }]}>
+                          {item.applicantBy || 'Self'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
+
+                  {/* Applicant Details if not self */}
+                  {item.applicantBy && item.applicantBy !== 'Self' && item.applicantBy !== 'Self (Patient)' ? (
+                    <View style={{ marginTop: 6, paddingHorizontal: 4 }}>
+                      <Text style={{ fontSize: 11.5, color: theme.goldDark, fontWeight: '700' }}>
+                        👤 Applicant: {item.applicantName || item.applicantBy}
+                        {item.applicantPhone ? ` (📞 ${item.applicantPhone})` : ''}
+                      </Text>
+                    </View>
+                  ) : null}
 
                   {/* Target Doctor Info */}
                   <View style={[styles.doctorTargetBox, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>

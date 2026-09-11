@@ -122,8 +122,8 @@ export const AppNavigator: React.FC = () => {
       >
         {!isAuthenticated ? (
           <>
-            <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="PublicBooking" component={PublicBookingScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Login" component={LoginScreen} />
           </>
         ) : (
           <>

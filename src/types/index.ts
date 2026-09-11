@@ -236,8 +236,11 @@ export interface Hospital {
 
 export interface CapacitySlot {
   doctorId: string;
+  doctorName?: string;
   date: string;
   totalCapacity: number;
   bookedSlots: number;
+  booked?: number;
   availableSlots: number;
+  available?: number;
 }

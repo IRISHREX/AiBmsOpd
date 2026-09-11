@@ -24,6 +24,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 import { doctorsApi } from '../api/doctors';
+import apiClient from '../api/client';
 import { Doctor, CapacitySlot } from '../types';
 import { interactionUtils } from '../utils/interactionUtils';
 import { ageToDob } from '../utils/ageUtils';
@@ -36,6 +37,7 @@ import { colors } from '../theme/colors';
 export const DoctorsScreen: React.FC = () => {
   const { colors: theme } = useTheme();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [compounders, setCompounders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,11 +59,27 @@ export const DoctorsScreen: React.FC = () => {
   const [docAge, setDocAge] = useState('');
   const [docGender, setDocGender] = useState('Male');
   const [docSpecialty, setDocSpecialty] = useState('');
-  const [docDepartment, setDocDepartment] = useState('');
+  const [docDepartment, setDocDepartment] = useState('General Medicine');
   const [docQualifications, setDocQualifications] = useState('');
   const [docFee, setDocFee] = useState('500');
   const [docCompounder, setDocCompounder] = useState('');
+  const [docCompounderId, setDocCompounderId] = useState('');
   const [step, setStep] = useState(1);
+
+  // Edit doctor modal
+  const [editModalDoc, setEditModalDoc] = useState<Doctor | null>(null);
+  const [editDocName, setEditDocName] = useState('');
+  const [editDocEmail, setEditDocEmail] = useState('');
+  const [editDocPhone, setEditDocPhone] = useState('');
+  const [editDocAge, setEditDocAge] = useState('');
+  const [editDocGender, setEditDocGender] = useState('Male');
+  const [editDocSpecialty, setEditDocSpecialty] = useState('');
+  const [editDocDepartment, setEditDocDepartment] = useState('General Medicine');
+  const [editDocQualifications, setEditDocQualifications] = useState('');
+  const [editDocFee, setEditDocFee] = useState('500');
+  const [editDocCompounder, setEditDocCompounder] = useState('');
+  const [editDocCompounderId, setEditDocCompounderId] = useState('');
+  const [isUpdatingDoctor, setIsUpdatingDoctor] = useState(false);
 
   const fetchDoctors = useCallback(async () => {
     try {
@@ -75,14 +93,47 @@ export const DoctorsScreen: React.FC = () => {
     }
   }, []);
 
+  const fetchCompounders = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/api/v1/user/compounders');
+      setCompounders(res.data.compounders || []);
+    } catch (e) {
+      console.warn('Could not load compounders:', e);
+    }
+  }, []);
+
   useEffect(() => {
     fetchDoctors();
-  }, [fetchDoctors]);
+    fetchCompounders();
+  }, [fetchDoctors, fetchCompounders]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
     fetchDoctors();
-  }, [fetchDoctors]);
+    fetchCompounders();
+  }, [fetchDoctors, fetchCompounders]);
+
+  // Autosuggest for compounders in Add modal
+  const addCompounderSuggestions = useMemo(() => {
+    const q = docCompounder.trim().toLowerCase();
+    if (!q || q.length < 1) return [];
+    return compounders.filter((c) => {
+      const name = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+      const phone = (c.phone || '').toLowerCase();
+      return name.includes(q) || phone.includes(q);
+    }).slice(0, 5);
+  }, [compounders, docCompounder]);
+
+  // Autosuggest for compounders in Edit modal
+  const editCompounderSuggestions = useMemo(() => {
+    const q = editDocCompounder.trim().toLowerCase();
+    if (!q || q.length < 1) return [];
+    return compounders.filter((c) => {
+      const name = `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase();
+      const phone = (c.phone || '').toLowerCase();
+      return name.includes(q) || phone.includes(q);
+    }).slice(0, 5);
+  }, [compounders, editDocCompounder]);
 
   const handleCheckCapacity = async (doctorId: string, date: string) => {
     setSelectedDocId(doctorId);
@@ -99,8 +150,8 @@ export const DoctorsScreen: React.FC = () => {
   };
 
   const handleAddDoctor = async () => {
-    if (!docName || !docEmail || !docSpecialty) {
-      Alert.alert('Validation Error', 'Name, Email, and Specialization are required');
+    if (!docName.trim() || !docEmail.trim() || !docSpecialty.trim()) {
+      Alert.alert('Validation Error', 'Full Name, Official Email, and Specialization are required.');
       return;
     }
 
@@ -113,16 +164,20 @@ export const DoctorsScreen: React.FC = () => {
       const doctorData = {
         firstName,
         lastName,
+        name: docName.trim(),
         email: docEmail.trim(),
-        phone: docPhone.trim() || '1234567890',
-        gender: docGender,
+        phone: docPhone.trim() || '9876543210',
+        gender: docGender || 'Male',
         dob: ageToDob(docAge || '35'),
-        nic: makeNIC(docPhone.trim() || '12345678901', docAge || '35'),
-        doctorDepartment: docDepartment || 'Pediatrics',
-        specialization: docSpecialty,
-        qualifications: docQualifications || 'MBBS',
+        nic: makeNIC(docPhone.trim() || '9876543210', docAge || '35'),
+        password: 'Doctor@123',
+        doctorDepartment: docDepartment || 'General Medicine',
+        specialization: docSpecialty.trim(),
+        qualifications: docQualifications.trim() || 'MBBS',
         visitingFee: parseFloat(docFee) || 500,
-        compounderName: docCompounder || undefined,
+        consultationFee: parseFloat(docFee) || 500,
+        compounderId: docCompounderId || undefined,
+        compounderName: docCompounder.trim() || undefined,
       };
 
       await doctorsApi.addNew(doctorData);
@@ -136,14 +191,81 @@ export const DoctorsScreen: React.FC = () => {
       setDocPhone('');
       setDocAge('');
       setDocSpecialty('');
-      setDocDepartment('');
+      setDocDepartment('General Medicine');
       setDocQualifications('');
       setDocFee('500');
       setDocCompounder('');
+      setDocCompounderId('');
 
       fetchDoctors();
     } catch (e: any) {
       Alert.alert('Error', e.response?.data?.message || e.message || 'Failed to add doctor');
+    }
+  };
+
+  const openEditDoctorModal = (doc: Doctor) => {
+    interactionUtils.playClick();
+    setEditModalDoc(doc);
+    const dName = doc.name || `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
+    setEditDocName(dName);
+    setEditDocEmail(doc.email || '');
+    setEditDocPhone(doc.phone || '');
+    setEditDocAge(doc.age?.toString() || '35');
+    setEditDocGender(doc.gender || 'Male');
+    setEditDocSpecialty(doc.specialization || doc.department || '');
+    setEditDocDepartment(doc.doctorDepartment || doc.department || 'General Medicine');
+    setEditDocQualifications(doc.qualifications || 'MBBS');
+    setEditDocFee((doc.visitingFee || doc.consultationFee || 500).toString());
+    
+    // Set compounder if present
+    if (doc.compounders && doc.compounders.length > 0 && typeof doc.compounders[0] === 'object') {
+      const c = doc.compounders[0];
+      setEditDocCompounder(`${c.firstName || ''} ${c.lastName || ''}`.trim());
+      setEditDocCompounderId(c._id);
+    } else {
+      setEditDocCompounder('');
+      setEditDocCompounderId('');
+    }
+  };
+
+  const handleUpdateDoctor = async () => {
+    if (!editModalDoc) return;
+    if (!editDocName.trim() || !editDocEmail.trim()) {
+      Alert.alert('Required Fields', 'Doctor name and email are required.');
+      return;
+    }
+
+    try {
+      setIsUpdatingDoctor(true);
+      const nameParts = editDocName.trim().split(' ');
+      const firstName = nameParts[0] || 'Dr.';
+      const lastName = nameParts.slice(1).join(' ') || 'Physician';
+
+      const payload = {
+        firstName,
+        lastName,
+        name: editDocName.trim(),
+        email: editDocEmail.trim(),
+        phone: editDocPhone.trim() || undefined,
+        gender: editDocGender,
+        age: editDocAge ? Number(editDocAge) : undefined,
+        doctorDepartment: editDocDepartment,
+        specialization: editDocSpecialty.trim(),
+        qualifications: editDocQualifications.trim(),
+        visitingFee: parseFloat(editDocFee) || 500,
+        consultationFee: parseFloat(editDocFee) || 500,
+        compounderId: editDocCompounderId || undefined,
+      };
+
+      await doctorsApi.update(editModalDoc._id, payload);
+      interactionUtils.playSuccess();
+      Alert.alert('Success', `Dr. ${editDocName} updated successfully`);
+      setEditModalDoc(null);
+      fetchDoctors();
+    } catch (e: any) {
+      Alert.alert('Update Failed', e.response?.data?.message || e.message || 'Failed to update doctor');
+    } finally {
+      setIsUpdatingDoctor(false);
     }
   };
 
@@ -162,11 +284,11 @@ export const DoctorsScreen: React.FC = () => {
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Top Search & Add Bar */}
       <View style={styles.headerRow}>
-        <View style={[styles.searchWrapper, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
+        <View style={[styles.searchWrapper, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
           <Ionicons name="search-outline" size={18} color={theme.textMuted} style={{ marginRight: 8 }} />
           <TextInput
             style={[styles.searchInput, { color: theme.textPrimary }]}
-            placeholder="Search doctors, specialty, dept..."
+            placeholder="Search doctor, dept, spec..."
             placeholderTextColor={theme.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -177,30 +299,36 @@ export const DoctorsScreen: React.FC = () => {
             </TouchableOpacity>
           ) : null}
         </View>
+
         <TouchableOpacity
-          style={[styles.addBtn, { backgroundColor: theme.primary }]}
+          style={[styles.addBtn, { backgroundColor: theme.goldDark }]}
           onPress={() => {
             interactionUtils.playClick();
             setIsAddDoctorOpen(true);
           }}
         >
-          <Ionicons name="person-add-outline" size={18} color="#ffffff" style={{ marginRight: 4 }} />
-          <Text style={styles.addBtnText}>Add</Text>
+          <Ionicons name="person-add" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+          <Text style={styles.addBtnText}>+ Add Doctor</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Capacity Checker Section */}
+      {/* Capacity Section */}
       <View style={[styles.capacitySection, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-          <Ionicons name="calendar-outline" size={16} color={theme.gold} />
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Live OPD Slot Capacity</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Live OPD Capacity Checker</Text>
+          {selectedDocId && (
+            <TouchableOpacity onPress={() => { setSelectedDocId(null); setCapacityData(null); }}>
+              <Text style={{ fontSize: 11, color: theme.primary, fontWeight: '700' }}>Clear</Text>
+            </TouchableOpacity>
+          )}
         </View>
+
         <View style={styles.capacityRow}>
           <TouchableOpacity
             style={[styles.dateSelectorBtn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
             onPress={() => setShowDatePicker(true)}
           >
-            <Ionicons name="time-outline" size={14} color={theme.primary} style={{ marginRight: 6 }} />
+            <Ionicons name="calendar-outline" size={14} color={theme.primary} style={{ marginRight: 6 }} />
             <Text style={[styles.dateText, { color: theme.textPrimary }]}>{capacityDate}</Text>
           </TouchableOpacity>
 
@@ -212,39 +340,43 @@ export const DoctorsScreen: React.FC = () => {
               onChange={(event, selected) => {
                 setShowDatePicker(false);
                 if (selected) {
-                  const d = selected.toISOString().split('T')[0];
-                  setCapacityDate(d);
-                  if (selectedDocId) handleCheckCapacity(selectedDocId, d);
+                  const dStr = selected.toISOString().split('T')[0];
+                  setCapacityDate(dStr);
+                  if (selectedDocId) handleCheckCapacity(selectedDocId, dStr);
                 }
               }}
             />
           )}
 
           <TouchableOpacity
-            style={[styles.checkBtn, { backgroundColor: theme.primarySoft, borderColor: theme.primaryMuted }]}
+            style={[styles.checkBtn, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}
             onPress={() => {
               if (selectedDocId) handleCheckCapacity(selectedDocId, capacityDate);
-              else Alert.alert('Notice', 'Select a doctor below to view live slot availability');
+              else Alert.alert('Select Doctor', 'Please tap on a doctor card below to view their capacity.');
             }}
           >
-            <Text style={[styles.checkBtnText, { color: theme.primary }]}>Refresh Slot</Text>
+            {isLoadingCapacity ? (
+              <ActivityIndicator size="small" color={theme.primary} />
+            ) : (
+              <Text style={[styles.checkBtnText, { color: theme.primary }]}>Refresh</Text>
+            )}
           </TouchableOpacity>
         </View>
 
-        {isLoadingCapacity ? (
-          <ActivityIndicator size="small" color={theme.primary} style={{ marginTop: 8 }} />
-        ) : capacityData ? (
+        {capacityData && (
           <View style={[styles.capacityResults, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-            <Text style={[styles.capacityResultText, { color: theme.textSecondary }]}>
-              Total Capacity: <Text style={{ fontWeight: '700', color: theme.textPrimary }}>{capacityData.totalCapacity || '20'}</Text> | Booked: <Text style={{ fontWeight: '700', color: theme.warning }}>{capacityData.bookedSlots || 0}</Text> | Available:{' '}
-              <Text style={{ fontWeight: '800', color: theme.success }}>
-                {capacityData.availableSlots ?? 20} slots
-              </Text>
+            <Text style={[styles.capacityResultText, { color: theme.textPrimary }]}>
+              Doctor: <Text style={{ fontWeight: '800', color: theme.primary }}>{capacityData.doctorName || 'Selected Doctor'}</Text>
+            </Text>
+            <Text style={[styles.capacityResultText, { color: theme.textSecondary, marginTop: 2 }]}>
+              Capacity: <Text style={{ fontWeight: '700' }}>{capacityData.totalCapacity || 25}</Text> | Booked: <Text style={{ fontWeight: '700', color: theme.danger }}>{capacityData.booked || 0}</Text> | Available: <Text style={{ fontWeight: '800', color: theme.success }}>{capacityData.available ?? 25}</Text>
             </Text>
           </View>
-        ) : (
+        )}
+
+        {!selectedDocId && (
           <Text style={[styles.capacityHint, { color: theme.textMuted }]}>
-            Tap any doctor below to inspect real-time schedule & slot availability
+            Tap any doctor card below to inspect slot availability & live patient capacity.
           </Text>
         )}
       </View>
@@ -289,17 +421,39 @@ export const DoctorsScreen: React.FC = () => {
                     {item.name ? item.name.charAt(0).toUpperCase() : 'D'}
                   </Text>
                 </View>
+
                 <View style={styles.doctorInfo}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={[styles.doctorName, { color: theme.textPrimary }]}>{docDisplayName}</Text>
-                    {isSelected && (
-                      <View style={[styles.selectedBadge, { backgroundColor: theme.goldSoft, borderColor: theme.goldBorder }]}>
-                        <Ionicons name="checkmark-circle" size={12} color={theme.goldDark} />
-                        <Text style={[styles.selectedBadgeText, { color: theme.goldDark }]}>Active</Text>
-                      </View>
-                    )}
+                    
+                    <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                      {isSelected && (
+                        <View style={[styles.selectedBadge, { backgroundColor: theme.goldSoft, borderColor: theme.goldBorder }]}>
+                          <Ionicons name="checkmark-circle" size={12} color={theme.goldDark} />
+                          <Text style={[styles.selectedBadgeText, { color: theme.goldDark }]}>Active</Text>
+                        </View>
+                      )}
+                      {/* Edit Doctor Button */}
+                      <TouchableOpacity
+                        style={[styles.editDocBtn, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}
+                        onPress={() => openEditDoctorModal(item)}
+                      >
+                        <Ionicons name="create-outline" size={13} color={theme.primary} />
+                        <Text style={[styles.editDocBtnText, { color: theme.primary }]}>Edit</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                  <Text style={[styles.specialty, { color: theme.primary }]}>{item.specialization}</Text>
+
+                  <Text style={[styles.specialty, { color: theme.primary }]}>
+                    {item.specialization || item.department || 'Specialist Physician'}
+                  </Text>
+
+                  {item.qualifications ? (
+                    <Text style={[styles.metaText, { color: theme.textMuted, marginTop: 2 }]}>
+                      {item.qualifications}
+                    </Text>
+                  ) : null}
+
                   <View style={styles.metaRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Ionicons name="call-outline" size={12} color={theme.textMuted} />
@@ -307,7 +461,7 @@ export const DoctorsScreen: React.FC = () => {
                     </View>
                     <Text style={[styles.metaText, { color: theme.textMuted }]}>•</Text>
                     <Text style={[styles.metaText, { color: theme.goldDark, fontWeight: '700' }]}>
-                      Fee: ₹{item.visitingFee || 500}
+                      Fee: ₹{item.visitingFee || item.consultationFee || 500}
                     </Text>
                   </View>
                 </View>
@@ -356,7 +510,7 @@ export const DoctorsScreen: React.FC = () => {
                     onChangeText={setDocEmail}
                   />
 
-                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Contact Phone *</Text>
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Contact Phone</Text>
                   <TextInput
                     style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
                     placeholder="10-digit Phone"
@@ -434,14 +588,43 @@ export const DoctorsScreen: React.FC = () => {
                     onChangeText={setDocFee}
                   />
 
-                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Assigned Compounder</Text>
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Assigned Compounder (Type to Auto-suggest)</Text>
                   <TextInput
                     style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
-                    placeholder="Compounder Name"
+                    placeholder="Type compounder name or phone..."
                     placeholderTextColor={theme.textMuted}
                     value={docCompounder}
-                    onChangeText={setDocCompounder}
+                    onChangeText={(t) => {
+                      setDocCompounder(t);
+                      if (!t) setDocCompounderId('');
+                    }}
                   />
+
+                  {/* Autosuggest chips while typing compounder */}
+                  {addCompounderSuggestions.length > 0 && (
+                    <View style={styles.suggestionsContainer}>
+                      <Text style={[styles.suggestionsHeader, { color: theme.goldDark }]}>
+                        Matching Compounders (Tap to Select):
+                      </Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                        {addCompounderSuggestions.map((comp) => (
+                          <TouchableOpacity
+                            key={comp._id}
+                            style={[styles.suggestChip, { backgroundColor: theme.surfaceElevated, borderColor: theme.goldBorder }]}
+                            onPress={() => {
+                              setDocCompounder(`${comp.firstName || ''} ${comp.lastName || ''}`.trim());
+                              setDocCompounderId(comp._id);
+                            }}
+                          >
+                            <Ionicons name="person" size={12} color={theme.goldDark} />
+                            <Text style={[styles.suggestChipText, { color: theme.textPrimary }]}>
+                              {comp.firstName} {comp.lastName} ({comp.phone || 'Staff'})
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )}
 
                   <View style={styles.modalButtons}>
                     <TouchableOpacity
@@ -459,6 +642,163 @@ export const DoctorsScreen: React.FC = () => {
                   </View>
                 </>
               )}
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit Doctor Modal */}
+      <Modal visible={!!editModalDoc} animationType="slide" transparent>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBg }]}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
+                  Edit Doctor Profile
+                </Text>
+                <TouchableOpacity onPress={() => setEditModalDoc(null)}>
+                  <Ionicons name="close-circle-outline" size={24} color={theme.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Full Name *</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                value={editDocName}
+                onChangeText={setEditDocName}
+                placeholder="Dr. Full Name"
+                placeholderTextColor={theme.textMuted}
+              />
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Official Email *</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                value={editDocEmail}
+                onChangeText={setEditDocEmail}
+                placeholder="doctor@hospital.com"
+                placeholderTextColor={theme.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Contact Phone</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                    value={editDocPhone}
+                    onChangeText={setEditDocPhone}
+                    placeholder="Phone"
+                    placeholderTextColor={theme.textMuted}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+                <View style={{ width: 80 }}>
+                  <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Age</Text>
+                  <TextInput
+                    style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                    value={editDocAge}
+                    onChangeText={setEditDocAge}
+                    placeholder="Age"
+                    placeholderTextColor={theme.textMuted}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Specialization *</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                value={editDocSpecialty}
+                onChangeText={setEditDocSpecialty}
+                placeholder="Specialization"
+                placeholderTextColor={theme.textMuted}
+              />
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Department</Text>
+              <View style={{ zIndex: 9, marginBottom: 10 }}>
+                <DropdownPicker label="" placeholder="Department" value={editDocDepartment} options={DEPARTMENTS} onSelect={setEditDocDepartment} />
+              </View>
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Qualifications</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                value={editDocQualifications}
+                onChangeText={setEditDocQualifications}
+                placeholder="e.g. MBBS, MD"
+                placeholderTextColor={theme.textMuted}
+              />
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Consultation Fee (₹)</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                value={editDocFee}
+                onChangeText={setEditDocFee}
+                placeholder="500"
+                placeholderTextColor={theme.textMuted}
+                keyboardType="numeric"
+              />
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Assigned Compounder (Type to Auto-suggest)</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                value={editDocCompounder}
+                onChangeText={(t) => {
+                  setEditDocCompounder(t);
+                  if (!t) setEditDocCompounderId('');
+                }}
+                placeholder="Type compounder name..."
+                placeholderTextColor={theme.textMuted}
+              />
+
+              {/* Autosuggest chips for edit modal */}
+              {editCompounderSuggestions.length > 0 && (
+                <View style={styles.suggestionsContainer}>
+                  <Text style={[styles.suggestionsHeader, { color: theme.goldDark }]}>
+                    Matching Compounders:
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                    {editCompounderSuggestions.map((comp) => (
+                      <TouchableOpacity
+                        key={comp._id}
+                        style={[styles.suggestChip, { backgroundColor: theme.surfaceElevated, borderColor: theme.goldBorder }]}
+                        onPress={() => {
+                          setEditDocCompounder(`${comp.firstName || ''} ${comp.lastName || ''}`.trim());
+                          setEditDocCompounderId(comp._id);
+                        }}
+                      >
+                        <Ionicons name="person" size={12} color={theme.goldDark} />
+                        <Text style={[styles.suggestChipText, { color: theme.textPrimary }]}>
+                          {comp.firstName} {comp.lastName} ({comp.phone || 'Staff'})
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.btn, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, borderWidth: 1 }]}
+                  onPress={() => setEditModalDoc(null)}
+                >
+                  <Text style={[styles.btnCancelText, { color: theme.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.btn, { backgroundColor: theme.primary }]}
+                  onPress={handleUpdateDoctor}
+                  disabled={isUpdatingDoctor}
+                >
+                  {isUpdatingDoctor ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text style={styles.btnConfirmText}>Update Doctor</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -504,7 +844,7 @@ const styles = StyleSheet.create({
   },
   addBtnText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
   },
   capacitySection: {
@@ -615,6 +955,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
   },
+  editDocBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  editDocBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
   specialty: {
     fontSize: 12.5,
     fontWeight: '700',
@@ -671,6 +1024,31 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     fontSize: 13,
     marginBottom: 10,
+  },
+  suggestionsContainer: {
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginBottom: 10,
+  },
+  suggestionsHeader: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  suggestChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  suggestChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
   },
   modalButtons: {
     flexDirection: 'row',
