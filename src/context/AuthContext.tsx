@@ -29,9 +29,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         // Load custom backend URL if previously configured by the user
         const storedUrl = await AsyncStorage.getItem(BACKEND_URL_STORAGE_KEY);
-        if (storedUrl) {
+        if (storedUrl && !storedUrl.includes('localhost') && !storedUrl.includes('127.0.0.1')) {
           setBackendUrlState(storedUrl);
           setBaseUrl(storedUrl);
+        } else {
+          setBackendUrlState(DEFAULT_API_BASE_URL);
+          setBaseUrl(DEFAULT_API_BASE_URL);
+          await AsyncStorage.setItem(BACKEND_URL_STORAGE_KEY, DEFAULT_API_BASE_URL);
         }
 
         // Check for stored token and restore user profile

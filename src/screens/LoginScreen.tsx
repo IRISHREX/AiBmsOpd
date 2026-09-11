@@ -44,6 +44,27 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
         err.response?.data?.message ||
         err.message ||
         'Failed to connect to server. Check your backend URL.';
+
+      // If role mismatch error ("User Not Found With This Role!"), automatically try alternative staff roles
+      if (typeof msg === 'string' && (msg.toLowerCase().includes('role') || msg.toLowerCase().includes('not found with this role'))) {
+        const altRoles: ('Doctor' | 'Admin' | 'Compounder')[] = (['Doctor', 'Admin', 'Compounder'] as const).filter((r) => r !== role);
+        let recovered = false;
+        for (const alt of altRoles) {
+          try {
+            await login(email.trim(), password, alt);
+            setRole(alt);
+            recovered = true;
+            break;
+          } catch (altErr) {
+            // continue checking
+          }
+        }
+        if (recovered) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       console.log('Login error:', err);
       setErrorMessage(msg);
       Alert.alert('Login Error', msg);

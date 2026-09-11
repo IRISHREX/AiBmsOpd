@@ -24,11 +24,11 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "owner": "irishrex",
     "extra": {
       "eas": {
-        "projectId": "bce1c549-38d8-4270-ac8f-8377c367bfba"
+        "projectId": "4a0946f1-cd14-4c24-8dae-e520c63e2122"
       }
-    },
-    "owner": "irishrexs-team"
+    }
   }
 }

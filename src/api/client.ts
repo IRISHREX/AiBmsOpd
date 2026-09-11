@@ -1,9 +1,11 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Default to environment variable or fallback to localhost/deployed endpoint
+// Default to environment variable or fallback to deployed Render endpoint
 export const DEFAULT_API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+  process.env.EXPO_PUBLIC_API_URL ||
+  (typeof process !== 'undefined' && process.env?.VITE_API_URL) ||
+  'https://bms-opd-be.onrender.com';
 
 export const AUTH_TOKEN_KEY = '@bms_opd_token';
 export const USER_DATA_KEY = '@bms_opd_user';
