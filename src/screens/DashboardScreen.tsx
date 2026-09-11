@@ -15,7 +15,6 @@ import { useAuth } from '../context/AuthContext';
 import { appointmentsApi } from '../api/appointments';
 import { invoicesApi } from '../api/invoices';
 import { Appointment } from '../types';
-import { BarChart } from 'react-native-chart-kit';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../theme/colors';
 import { useTheme } from '../context/ThemeContext';
@@ -59,6 +58,7 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
 
   const totalAppts = appointments.length;
   const pendingAppts = appointments.filter((a) => a.status === 'Pending').length;
+  const acceptedAppts = appointments.filter((a) => a.status === 'Accepted').length;
   const completedAppts = appointments.filter((a) => a.status === 'Completed').length;
   const cancelledAppts = appointments.filter((a) => a.status === 'Cancelled').length;
 
@@ -88,15 +88,6 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
         a.paymentStatus?.toLowerCase() === 'paid'
     )
     .reduce((sum, a) => sum + (Number(a.price) || 0), 0);
-
-  const chartData = {
-    labels: ['Pending', 'Completed', 'Cancelled'],
-    datasets: [
-      {
-        data: [pendingAppts, completedAppts, cancelledAppts],
-      },
-    ],
-  };
 
   return (
     <ScrollView
@@ -209,34 +200,56 @@ export const DashboardScreen: React.FC<{ navigation: any }> = ({ navigation }) =
         </TouchableOpacity>
       </View>
 
-      {/* Charts Module */}
+      {/* Charts Module - Native Status Breakdown */}
       <View style={styles.chartCard}>
         <View style={styles.chartHeader}>
           <Ionicons name="pie-chart-outline" size={18} color={colors.gold} style={{ marginRight: 6 }} />
-          <Text style={styles.chartTitle}>Appointments Status</Text>
+          <Text style={styles.chartTitle}>Appointments Status Distribution</Text>
         </View>
-        <BarChart
-          data={chartData}
-          width={screenWidth - 56}
-          height={210}
-          yAxisLabel=""
-          yAxisSuffix=""
-          chartConfig={{
-            backgroundColor: colors.cardBg,
-            backgroundGradientFrom: colors.cardBg,
-            backgroundGradientTo: colors.cardBg,
-            decimalPlaces: 0,
-            color: (opacity = 1) => `rgba(30, 64, 175, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(71, 85, 105, ${opacity})`,
-            style: {
-              borderRadius: 16,
-            },
-          }}
-          style={{
-            marginVertical: 4,
-            borderRadius: 16,
-          }}
-        />
+
+        {/* Proportional Distribution Bar */}
+        <View style={{ width: '100%', marginBottom: 14 }}>
+          <View style={{ flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden', width: '100%', backgroundColor: '#e2e8f0' }}>
+            {totalAppts > 0 && (
+              <>
+                {pendingAppts > 0 && (
+                  <View style={{ flex: pendingAppts, backgroundColor: '#f59e0b' }} />
+                )}
+                {acceptedAppts > 0 && (
+                  <View style={{ flex: acceptedAppts, backgroundColor: '#0284c7' }} />
+                )}
+                {completedAppts > 0 && (
+                  <View style={{ flex: completedAppts, backgroundColor: '#059669' }} />
+                )}
+                {cancelledAppts > 0 && (
+                  <View style={{ flex: cancelledAppts, backgroundColor: '#dc2626' }} />
+                )}
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* 4 Status Metric Cards */}
+        <View style={styles.statusGrid}>
+          {[
+            { label: 'Pending', count: pendingAppts, color: '#d97706', bg: '#fef3c7', icon: 'hourglass-outline' },
+            { label: 'Accepted', count: acceptedAppts, color: '#0284c7', bg: '#e0f2fe', icon: 'calendar-outline' },
+            { label: 'Completed', count: completedAppts, color: '#059669', bg: '#d1fae5', icon: 'checkmark-circle-outline' },
+            { label: 'Cancelled', count: cancelledAppts, color: '#dc2626', bg: '#fee2e2', icon: 'close-circle-outline' },
+          ].map((st) => {
+            const pct = totalAppts > 0 ? Math.round((st.count / totalAppts) * 100) : 0;
+            return (
+              <View key={st.label} style={[styles.statusBox, { backgroundColor: st.bg, borderColor: st.color + '35' }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <Ionicons name={st.icon as any} size={14} color={st.color} />
+                  <Text style={[styles.statusPct, { color: st.color }]}>{pct}%</Text>
+                </View>
+                <Text style={[styles.statusCount, { color: st.color }]}>{st.count}</Text>
+                <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>{st.label}</Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
 
       {/* Recent Appointments */}
@@ -439,6 +452,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  statusGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    width: '100%',
+  },
+  statusBox: {
+    flex: 1,
+    minWidth: '45%',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  statusPct: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  statusCount: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  statusLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 2,
   },
   actionsRow: {
     flexDirection: 'row',
