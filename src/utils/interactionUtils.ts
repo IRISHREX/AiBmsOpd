@@ -14,6 +14,8 @@ Notifications.setNotificationHandler({
 class InteractionUtils {
   private clickSound?: Audio.Sound;
   private successSound?: Audio.Sound;
+  private wooshSound?: Audio.Sound;
+  private chimeSound?: Audio.Sound;
 
   constructor() {
     this.initSounds();
@@ -30,6 +32,16 @@ class InteractionUtils {
         { uri: 'https://cdn.freesound.org/previews/270/270404_5123851-lq.mp3' }
       );
       this.successSound = success;
+
+      const { sound: woosh } = await Audio.Sound.createAsync(
+        { uri: 'https://cdn.freesound.org/previews/608/608645_11861866-lq.mp3' }
+      );
+      this.wooshSound = woosh;
+
+      const { sound: chime } = await Audio.Sound.createAsync(
+        { uri: 'https://cdn.freesound.org/previews/320/320655_5260872-lq.mp3' }
+      );
+      this.chimeSound = chime;
     } catch (e) {
       console.warn("Failed to load sound assets", e);
     }
@@ -41,6 +53,30 @@ class InteractionUtils {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       if (this.clickSound) {
         await this.clickSound.replayAsync();
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // Whoosh sound when dispatching/submitting a referral
+  async playWoosh() {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (this.wooshSound) {
+        await this.wooshSound.replayAsync();
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // Notification chime when viewing or receiving new notifications
+  async playNotificationSound() {
+    try {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (this.chimeSound) {
+        await this.chimeSound.replayAsync();
       }
     } catch (e) {
       // ignore

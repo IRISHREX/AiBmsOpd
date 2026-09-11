@@ -12,6 +12,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   backendUrl: string;
   login: (email: string, password: string, role?: string) => Promise<void>;
+  loginWithToken: (token: string, userData: any) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setCustomBackendUrl: (url: string) => Promise<void>;
@@ -73,6 +74,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(loggedUser));
   };
 
+  const loginWithToken = async (token: string, loggedUser: any) => {
+    await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
+    await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(loggedUser));
+    setUser(loggedUser);
+  };
+
   const logout = async () => {
     try {
       await authApi.logout();
@@ -106,6 +113,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!user,
         backendUrl,
         login,
+        loginWithToken,
         logout,
         refreshUser,
         setCustomBackendUrl,

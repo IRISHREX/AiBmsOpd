@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
-import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
+import { View, ActivityIndicator, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { NavigationContainer, createNavigationContainerRef, useNavigation } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { interactionUtils } from '../utils/interactionUtils';
 
 import { useAuth } from '../context/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
@@ -29,6 +30,7 @@ const Tab = createBottomTabNavigator();
 
 const MainTabs = () => {
   const { colors } = useTheme();
+  const navigation = useNavigation<any>();
 
   return (
     <Tab.Navigator
@@ -37,6 +39,38 @@ const MainTabs = () => {
         headerTitleStyle: { fontWeight: '800', color: colors.headerText, fontSize: 17 },
         headerTintColor: colors.headerTint,
         headerShadowVisible: false,
+        headerRight: () => (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginRight: 16 }}>
+            <TouchableOpacity
+              onPress={() => {
+                interactionUtils.playNotificationSound();
+                navigation.navigate('Messages');
+              }}
+              style={{ padding: 4, position: 'relative' }}
+              accessibilityLabel="Notifications"
+            >
+              <Ionicons name="notifications-outline" size={22} color={colors.headerTint} />
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  width: 8,
+                  height: 8,
+                  borderRadius: 4,
+                  backgroundColor: '#ef4444',
+                }}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Profile')}
+              style={{ padding: 4 }}
+              accessibilityLabel="User Profile"
+            >
+              <Ionicons name="person-circle-outline" size={26} color={colors.headerTint} />
+            </TouchableOpacity>
+          </View>
+        ),
         tabBarActiveTintColor: colors.tabBarActive,
         tabBarInactiveTintColor: colors.tabBarInactive,
         tabBarStyle: {
@@ -55,9 +89,8 @@ const MainTabs = () => {
           let iconName: keyof typeof Ionicons.glyphMap = 'grid-outline';
           if (route.name === 'Dashboard') iconName = focused ? 'home' : 'home-outline';
           else if (route.name === 'Appointments') iconName = focused ? 'calendar' : 'calendar-outline';
-          else if (route.name === 'Doctors') iconName = focused ? 'fitness' : 'fitness-outline';
+          else if (route.name === 'Referrals') iconName = focused ? 'git-network' : 'git-network-outline';
           else if (route.name === 'Prescriptions') iconName = focused ? 'medkit' : 'medkit-outline';
-          else if (route.name === 'Invoices') iconName = focused ? 'receipt' : 'receipt-outline';
           else if (route.name === 'Menu') iconName = focused ? 'menu' : 'menu-outline';
           return <Ionicons name={iconName} size={22} color={color} />;
         },
@@ -74,19 +107,14 @@ const MainTabs = () => {
         options={{ title: 'Appointments' }}
       />
       <Tab.Screen
-        name="Doctors"
-        component={DoctorsScreen}
-        options={{ title: 'Doctors' }}
+        name="Referrals"
+        component={ReferralsScreen}
+        options={{ title: 'Referrals' }}
       />
       <Tab.Screen
         name="Prescriptions"
         component={PrescriptionsScreen}
         options={{ title: 'Rx Store' }}
-      />
-      <Tab.Screen
-        name="Invoices"
-        component={InvoicesScreen}
-        options={{ title: 'Billing & Invoices' }}
       />
       <Tab.Screen
         name="Menu"
@@ -172,10 +200,12 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen name="PublicBooking" component={PublicBookingScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Main" component={MainTabs} />
+        <Stack.Screen name="Doctors" component={DoctorsScreen} options={{ headerShown: true, title: 'Doctors' }} />
+        <Stack.Screen name="Invoices" component={InvoicesScreen} options={{ headerShown: true, title: 'Billing & Invoices' }} />
         <Stack.Screen name="MedicineStore" component={MedicineStoreScreen} options={{ headerShown: true, title: 'Medicine Store' }} />
         <Stack.Screen name="Compounders" component={CompoundersScreen} options={{ headerShown: true, title: 'Compounders & Staff' }} />
         <Stack.Screen name="Reports" component={ReportsScreen} options={{ headerShown: true, title: 'Patient Reports' }} />
-        <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: true, title: 'Messages' }} />
+        <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: true, title: 'Notifications & Messages' }} />
         <Stack.Screen name="Referrals" component={ReferralsScreen} options={{ headerShown: true, title: 'Referrals' }} />
         <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: true, title: 'Profile' }} />
       </Stack.Navigator>

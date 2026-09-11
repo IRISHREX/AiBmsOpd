@@ -221,8 +221,12 @@ export interface Referral {
   targetHospitalName: string;
   department: string;
   reason: string;
-  urgency: 'Low' | 'Medium' | 'High' | 'Emergency';
-  status: 'Pending' | 'Accepted' | 'Completed';
+  urgency: 'Low' | 'Medium' | 'High' | 'Emergency' | string;
+  status: 'Pending' | 'Accepted' | 'Completed' | string;
+  commissionPercent?: number;
+  commissionAmount?: number;
+  commissionStatus?: string;
+  expenseId?: any;
   createdAt: string;
 }
 

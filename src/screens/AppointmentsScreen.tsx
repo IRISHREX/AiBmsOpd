@@ -13,6 +13,7 @@ import {
   Platform,
   UIManager,
   RefreshControl,
+  BackHandler,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -170,9 +171,31 @@ export const AppointmentsScreen: React.FC = () => {
 
   const handleSaveEditAppointment = async () => {
     if (!editModalAppt) return;
-    if (!editName.trim() || !editPhone.trim()) {
-      Alert.alert('Required Fields', 'Patient name and contact phone are required.');
+    const cleanPhone = editPhone.trim().replace(/[^0-9]/g, '');
+    if (!editName.trim()) {
+      Alert.alert('Validation Error', 'Patient name is required.');
       return;
+    }
+    if (!/^[0-9]{10}$/.test(cleanPhone)) {
+      Alert.alert('Validation Error', 'Phone number must be exactly 10 digits.');
+      return;
+    }
+    if (editAge) {
+      const a = Number(editAge);
+      if (isNaN(a) || a < 0 || a > 150) {
+        Alert.alert('Validation Error', 'Age must be between 0 and 150 years.');
+        return;
+      }
+    }
+    if (editDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const chosen = new Date(editDate);
+      chosen.setHours(0, 0, 0, 0);
+      if (chosen < today) {
+        Alert.alert('Validation Error', 'Appointment date cannot be in the past.');
+        return;
+      }
     }
 
     try {
@@ -265,6 +288,44 @@ export const AppointmentsScreen: React.FC = () => {
     fetchData();
   }, []);
 
+  // Hardware Back Button handler for Android to dismiss active modals
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isCreateModalOpen) {
+        setIsCreateModalOpen(false);
+        setStep(1);
+        return true;
+      }
+      if (editModalAppt) {
+        setEditModalAppt(null);
+        return true;
+      }
+      if (rescheduleModalAppt) {
+        setRescheduleModalAppt(null);
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [isCreateModalOpen, editModalAppt, rescheduleModalAppt]);
+
+  // Keep selected doctor matching the chosen department
+  useEffect(() => {
+    if (newDepartment && doctors.length > 0) {
+      const filtered = doctors.filter((doc) => {
+        const dept = (doc.doctorDepartment || doc.department || (doc as any).specialization || '').toLowerCase();
+        return dept.includes(newDepartment.toLowerCase()) || newDepartment.toLowerCase().includes(dept);
+      });
+      if (filtered.length > 0) {
+        if (!filtered.some((d) => d._id === selectedDoctorId)) {
+          setSelectedDoctorId(filtered[0]._id);
+          setNewPrice(filtered[0].visitingFee ? filtered[0].visitingFee.toString() : '500');
+        }
+      }
+    }
+  }, [newDepartment, doctors]);
+
   const handleSearch = async (text: string) => {
     setSearchQuery(text);
     if (!text.trim()) {
@@ -341,21 +402,47 @@ export const AppointmentsScreen: React.FC = () => {
   };
 
   const handleCreateAppointment = async () => {
-    if (!newPatientName.trim() || !newPatientPhone.trim() || !selectedDoctorId) {
-      Alert.alert('Validation', 'Please fill in patient name, phone, and select a doctor.');
+    const cleanPhone = newPatientPhone.trim().replace(/[^0-9]/g, '');
+    if (!newPatientName.trim()) {
+      Alert.alert('Validation Error', 'Please enter patient name.');
+      return;
+    }
+    if (!/^[0-9]{10}$/.test(cleanPhone)) {
+      Alert.alert('Validation Error', 'Patient phone number must be exactly 10 digits.');
+      return;
+    }
+    if (newPatientAge) {
+      const a = Number(newPatientAge);
+      if (isNaN(a) || a < 0 || a > 150) {
+        Alert.alert('Validation Error', 'Age must be between 0 and 150 years.');
+        return;
+      }
+    }
+    if (newApptDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const chosen = new Date(newApptDate);
+      chosen.setHours(0, 0, 0, 0);
+      if (chosen < today) {
+        Alert.alert('Validation Error', 'Appointment date cannot be in the past.');
+        return;
+      }
+    }
+    if (!selectedDoctorId) {
+      Alert.alert('Validation Error', 'Please select a doctor.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const calculatedNic = makeNIC(newPatientPhone.trim(), newPatientAge);
+      const calculatedNic = makeNIC(cleanPhone, newPatientAge);
       const calculatedDob = ageToDob(newPatientAge);
 
       const created = await appointmentsApi.create({
         patientName: newPatientName.trim(),
         name: newPatientName.trim(),
-        patientPhone: newPatientPhone.trim(),
-        phone: newPatientPhone.trim(),
+        patientPhone: cleanPhone,
+        phone: cleanPhone,
         patientAge: newPatientAge ? parseInt(newPatientAge, 10) : undefined,
         age: newPatientAge ? parseInt(newPatientAge, 10) : undefined,
         nic: calculatedNic,
@@ -378,6 +465,7 @@ export const AppointmentsScreen: React.FC = () => {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setAppointments((prev) => [created, ...prev]);
       setIsCreateModalOpen(false);
+      setStep(1);
       setNewPatientName('');
       setNewPatientPhone('');
       setNewPatientAge('');
@@ -399,6 +487,16 @@ export const AppointmentsScreen: React.FC = () => {
 
   const handleConfirmReschedule = async () => {
     if (!rescheduleModalAppt) return;
+    if (rescheduleDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const chosen = new Date(rescheduleDate);
+      chosen.setHours(0, 0, 0, 0);
+      if (chosen < today) {
+        Alert.alert('Validation Error', 'Appointments cannot be rescheduled to a past date.');
+        return;
+      }
+    }
     try {
       await appointmentsApi.reschedule(rescheduleModalAppt._id, {
         appointmentDate: rescheduleDate,
@@ -779,7 +877,25 @@ export const AppointmentsScreen: React.FC = () => {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.modalBtn, styles.modalBtnConfirm]}
-                    onPress={() => setStep(2)}
+                    onPress={() => {
+                      const cleanP = newPatientPhone.trim().replace(/[^0-9]/g, '');
+                      if (!newPatientName.trim()) {
+                        Alert.alert('Validation Error', 'Please enter patient name.');
+                        return;
+                      }
+                      if (!/^[0-9]{10}$/.test(cleanP)) {
+                        Alert.alert('Validation Error', 'Phone number must be exactly 10 digits.');
+                        return;
+                      }
+                      if (newPatientAge) {
+                        const a = Number(newPatientAge);
+                        if (isNaN(a) || a < 0 || a > 150) {
+                          Alert.alert('Validation Error', 'Age must be between 0 and 150 years.');
+                          return;
+                        }
+                      }
+                      setStep(2);
+                    }}
                   >
                     <Text style={styles.modalBtnConfirmText}>Next</Text>
                   </TouchableOpacity>
@@ -787,31 +903,39 @@ export const AppointmentsScreen: React.FC = () => {
               </>
             ) : (
               <>
-                <Text style={styles.modalLabel}>Select Doctor</Text>
+                <Text style={styles.modalLabel}>Select Doctor ({newDepartment})</Text>
                 <View style={styles.doctorPickerContainer}>
-              {doctors.slice(0, 4).map((doc) => (
-                <TouchableOpacity
-                  key={doc._id}
-                  style={[
-                    styles.doctorChip,
-                    selectedDoctorId === doc._id && styles.doctorChipActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedDoctorId(doc._id);
-                    setNewPrice(doc.visitingFee ? doc.visitingFee.toString() : '500');
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.doctorChipText,
-                      selectedDoctorId === doc._id && styles.doctorChipTextActive,
-                    ]}
-                  >
-                    {doc.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                  {(() => {
+                    const filtered = doctors.filter((doc) => {
+                      if (!newDepartment) return true;
+                      const dept = (doc.doctorDepartment || doc.department || (doc as any).specialization || '').toLowerCase();
+                      return dept.includes(newDepartment.toLowerCase()) || newDepartment.toLowerCase().includes(dept);
+                    });
+                    const listToRender = filtered.length > 0 ? filtered : doctors;
+                    return listToRender.map((doc) => (
+                      <TouchableOpacity
+                        key={doc._id}
+                        style={[
+                          styles.doctorChip,
+                          selectedDoctorId === doc._id && styles.doctorChipActive,
+                        ]}
+                        onPress={() => {
+                          setSelectedDoctorId(doc._id);
+                          setNewPrice(doc.visitingFee ? doc.visitingFee.toString() : '500');
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.doctorChipText,
+                            selectedDoctorId === doc._id && styles.doctorChipTextActive,
+                          ]}
+                        >
+                          {doc.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ));
+                  })()}
+                </View>
 
             <TextInput
               style={styles.modalInput}

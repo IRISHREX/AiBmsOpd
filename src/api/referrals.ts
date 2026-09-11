@@ -12,6 +12,11 @@ export const referralsApi = {
     return response.data.referral || response.data;
   },
 
+  bookPatient: async (payload: Record<string, any>): Promise<any> => {
+    const response = await apiClient.post('/api/v1/referral/book', payload);
+    return response.data;
+  },
+
   update: async (id: string, payload: Partial<Referral>): Promise<Referral> => {
     const response = await apiClient.put(`/api/v1/referral/update/${id}`, payload);
     return response.data.referral || response.data;

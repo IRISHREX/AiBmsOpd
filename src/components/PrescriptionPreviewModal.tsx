@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   Share,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
@@ -61,6 +62,16 @@ export const PrescriptionPreviewModal: React.FC<Props> = ({
       prescriptionSettingsService.getSettings().then(setSettings);
     }
   }, [visible, isSettingsOpen]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const onBackPress = () => {
+      onClose();
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [visible, onClose]);
 
   if (!appointment) return null;
 
@@ -149,27 +160,34 @@ export const PrescriptionPreviewModal: React.FC<Props> = ({
           <View style={[styles.containerCard, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
             {/* Top Bar */}
             <View style={[styles.topBar, { borderBottomColor: colors.border }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 }}>
                 <Ionicons name="document-text" size={20} color={colors.primary} />
-                <Text style={[styles.title, { color: colors.textPrimary }]}>Prescription Preview</Text>
+                <Text numberOfLines={1} style={[styles.title, { color: colors.textPrimary, flex: 1 }]}>
+                  Prescription
+                </Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <TouchableOpacity
                   style={[styles.brandingBtn, { backgroundColor: colors.primarySoft, borderColor: colors.primaryMuted }]}
                   onPress={handleShareWebLink}
                 >
-                  <Ionicons name="globe-outline" size={14} color={colors.primary} />
-                  <Text style={[styles.brandingBtnText, { color: colors.primary }]}>Web Link</Text>
+                  <Ionicons name="globe-outline" size={13} color={colors.primary} />
+                  <Text style={[styles.brandingBtnText, { color: colors.primary }]}>Web</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.brandingBtn, { backgroundColor: colors.goldSoft, borderColor: colors.goldBorder }]}
                   onPress={() => setIsSettingsOpen(true)}
                 >
-                  <Ionicons name="settings-outline" size={14} color={colors.goldDark} />
-                  <Text style={[styles.brandingBtnText, { color: colors.goldDark }]}>Branding</Text>
+                  <Ionicons name="settings-outline" size={13} color={colors.goldDark} />
+                  <Text style={[styles.brandingBtnText, { color: colors.goldDark }]}>Style</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={onClose} style={styles.closeIconBtn}>
-                  <Ionicons name="close" size={22} color={colors.textSecondary} />
+                <TouchableOpacity
+                  onPress={onClose}
+                  style={[styles.closeIconBtn, { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1 }]}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  accessibilityLabel="Close Preview"
+                >
+                  <Ionicons name="close" size={20} color={colors.textPrimary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -337,12 +355,20 @@ export const PrescriptionPreviewModal: React.FC<Props> = ({
             {/* Actions Bar */}
             <View style={[styles.actionsBar, { borderTopColor: colors.border }]}>
               <TouchableOpacity
+                style={[styles.closeActionBtn, { backgroundColor: colors.surfaceElevated, borderColor: colors.border }]}
+                onPress={onClose}
+              >
+                <Ionicons name="close-circle-outline" size={18} color={colors.textSecondary} />
+                <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>Close</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: colors.primarySoft, borderColor: colors.primaryMuted }]}
                 onPress={handlePrint}
                 disabled={isGeneratingPdf}
               >
                 <Ionicons name="print-outline" size={18} color={colors.primary} />
-                <Text style={[styles.actionBtnText, { color: colors.primary }]}>Print Prescription</Text>
+                <Text style={[styles.actionBtnText, { color: colors.primary }]}>Print</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -355,7 +381,7 @@ export const PrescriptionPreviewModal: React.FC<Props> = ({
                 ) : (
                   <>
                     <Ionicons name="download-outline" size={18} color="#ffffff" />
-                    <Text style={styles.actionBtnTextWhite}>Download PDF / Share</Text>
+                    <Text style={styles.actionBtnTextWhite}>Download</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -630,9 +656,19 @@ const styles = StyleSheet.create({
   },
   actionsBar: {
     flexDirection: 'row',
-    padding: 12,
-    gap: 10,
+    padding: 10,
+    gap: 8,
     borderTopWidth: 1,
+  },
+  closeActionBtn: {
+    flex: 0.8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 4,
   },
   actionBtn: {
     flex: 1,
@@ -642,7 +678,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1,
-    gap: 6,
+    gap: 4,
   },
   actionBtnText: {
     fontSize: 13,
@@ -655,7 +691,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 10,
-    gap: 6,
+    gap: 4,
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,

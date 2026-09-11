@@ -14,11 +14,13 @@ export const MenuScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
   const menuItems = [
     { title: 'Doctor Booking (Referral)', icon: 'calendar-number-outline', color: colors.gold, bg: colors.goldSoft, route: 'PublicBooking' },
+    { title: 'Doctors Directory', icon: 'fitness-outline', color: colors.primary, bg: colors.primarySoft, route: 'Doctors' },
+    { title: 'Billing & Invoices', icon: 'receipt-outline', color: colors.goldDark, bg: colors.goldSoft, route: 'Invoices' },
     { title: 'Medicine Store', icon: 'medkit-outline', color: colors.gold, bg: colors.goldSoft, route: 'MedicineStore' },
     { title: 'Compounders & Staff', icon: 'people-outline', color: colors.primary, bg: colors.primarySoft, route: 'Compounders' },
     { title: 'Patient Reports', icon: 'document-text-outline', color: colors.primarySky, bg: colors.infoSoft, route: 'Reports' },
-    { title: 'Messages', icon: 'chatbubbles-outline', color: colors.goldDark, bg: colors.goldSoft, route: 'Messages' },
-    { title: 'Referrals', icon: 'git-compare-outline', color: colors.primaryLight, bg: colors.primarySoft, route: 'Referrals' },
+    { title: 'Notifications & Messages', icon: 'chatbubbles-outline', color: colors.goldDark, bg: colors.goldSoft, route: 'Messages' },
+    { title: 'Referrals & Earnings', icon: 'git-network-outline', color: colors.primaryLight, bg: colors.primarySoft, route: 'Referrals' },
     { title: 'Profile & Settings', icon: 'settings-outline', color: colors.textSecondary, bg: colors.surfaceElevated, route: 'Profile' },
   ];
 

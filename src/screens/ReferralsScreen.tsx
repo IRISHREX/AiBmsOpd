@@ -13,6 +13,7 @@ import {
   Platform,
   ScrollView,
   RefreshControl,
+  BackHandler,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../api/client';
@@ -44,6 +45,10 @@ interface Referral {
   clinicalNotes?: string;
   urgency?: string;
   status: string;
+  commissionPercent?: number;
+  commissionAmount?: number;
+  commissionStatus?: string;
+  expenseId?: any;
   createdAt: string;
 }
 
@@ -78,6 +83,18 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
   useEffect(() => {
     fetchReferrals();
   }, [fetchReferrals]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (isModalOpen) {
+        setIsModalOpen(false);
+        return true;
+      }
+      return false;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [isModalOpen]);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -215,11 +232,11 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
 
         {activeTab === 'inbound' ? (
           <TouchableOpacity
-            style={[styles.addBtn, { backgroundColor: theme.gold }]}
+            style={[styles.addBtn, { backgroundColor: theme.goldDark }]}
             onPress={() => navigation.navigate('PublicBooking')}
           >
-            <Ionicons name="add-circle-outline" size={16} color="#ffffff" style={{ marginRight: 4 }} />
-            <Text style={styles.addBtnText}>Book (Referral)</Text>
+            <Ionicons name="add-circle" size={17} color="#ffffff" style={{ marginRight: 5 }} />
+            <Text style={styles.addBtnText}>+ Refer Patient</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
@@ -317,6 +334,15 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
                   ? 'No patient appointment requests yet'
                   : 'No hospital transfer referrals logged'}
               </Text>
+              {activeTab === 'inbound' && (
+                <TouchableOpacity
+                  style={[styles.referEmptyBtn, { backgroundColor: theme.goldDark }]}
+                  onPress={() => navigation.navigate('PublicBooking')}
+                >
+                  <Ionicons name="add-circle" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 13 }}>Refer a Patient Now</Text>
+                </TouchableOpacity>
+              )}
             </View>
           }
           renderItem={({ item }) => {
@@ -416,6 +442,44 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
                     <Text style={{ fontWeight: '700', color: theme.textPrimary }}>Symptoms: </Text>
                     {item.clinicalNotes || item.diagnosis || 'Consultation requested'}
                   </Text>
+
+                  {/* Referral Commission & Live Status Strip */}
+                  <View style={[styles.commissionStrip, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Ionicons name="cash-outline" size={14} color={theme.goldDark} />
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: theme.goldDark }}>
+                        Commission: ₹{item.commissionAmount || 0} ({item.commissionPercent || 5}%)
+                      </Text>
+                      <Text style={{ fontSize: 10.5, color: theme.textMuted, textTransform: 'capitalize' }}>
+                        • {item.commissionStatus || 'pending'}
+                      </Text>
+                    </View>
+
+                    {/* Status Pill */}
+                    <View
+                      style={[
+                        styles.statusPill,
+                        item.status === 'completed'
+                          ? { backgroundColor: '#d1fae5', borderColor: '#6ee7b7' }
+                          : item.status === 'accepted' || item.status === 'scheduled'
+                          ? { backgroundColor: theme.primarySoft, borderColor: theme.primaryMuted }
+                          : { backgroundColor: '#fef3c7', borderColor: '#fde68a' },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusPillText,
+                          item.status === 'completed'
+                            ? { color: '#047857' }
+                            : item.status === 'accepted' || item.status === 'scheduled'
+                            ? { color: theme.primary }
+                            : { color: '#b45309' },
+                        ]}
+                      >
+                        {(item.status || 'submitted').toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
 
                   {/* Card Action Row: Add as Appointment */}
                   <View style={[styles.cardFooter, { borderTopColor: theme.borderLight }]}>
@@ -641,6 +705,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    paddingTop: Platform.OS === 'android' ? 44 : 48,
   },
   headerRow: {
     flexDirection: 'row',
@@ -908,5 +973,34 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  commissionStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 9,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  statusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  statusPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  referEmptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 12,
   },
 });
