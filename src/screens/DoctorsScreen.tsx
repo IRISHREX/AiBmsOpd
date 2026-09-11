@@ -460,9 +460,12 @@ export const DoctorsScreen: React.FC = () => {
                       <Text style={[styles.metaText, { color: theme.textSecondary }]}>{item.phone || 'N/A'}</Text>
                     </View>
                     <Text style={[styles.metaText, { color: theme.textMuted }]}>•</Text>
-                    <Text style={[styles.metaText, { color: theme.goldDark, fontWeight: '700' }]}>
-                      Fee: ₹{item.visitingFee || item.consultationFee || 500}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Ionicons name="cash-outline" size={12} color={theme.goldDark} style={{ marginRight: 3 }} />
+                      <Text style={[styles.metaText, { color: theme.goldDark, fontWeight: '700' }]}>
+                        ₹{item.visitingFee || item.consultationFee || 500}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </TouchableOpacity>

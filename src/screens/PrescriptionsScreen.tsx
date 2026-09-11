@@ -352,17 +352,28 @@ export const PrescriptionsScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Tab Bar */}
+      {/* Tab Bar with Icons */}
       <View style={[styles.tabBar, { backgroundColor: colors.cardBg, borderColor: colors.border }]}>
-        {(['Vitals', 'ObGyn', 'Clinical', 'Medicines'] as const).map(tab => {
+        {[
+          { tab: 'Vitals', icon: 'pulse' },
+          { tab: 'ObGyn', icon: 'female' },
+          { tab: 'Clinical', icon: 'clipboard' },
+          { tab: 'Medicines', icon: 'medkit' },
+        ].map(({ tab, icon }) => {
           if (tab === 'ObGyn' && isMale) return null;
           const isActive = activeTab === tab;
           return (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, isActive && { backgroundColor: colors.primary }]}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => setActiveTab(tab as any)}
             >
+              <Ionicons
+                name={icon as any}
+                size={14}
+                color={isActive ? colors.textWhite : colors.textSecondary}
+                style={{ marginRight: 4 }}
+              />
               <Text style={[styles.tabText, { color: colors.textSecondary }, isActive && { color: colors.textWhite, fontWeight: '700' }]}>
                 {tab}
               </Text>

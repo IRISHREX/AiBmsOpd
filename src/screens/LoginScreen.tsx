@@ -18,9 +18,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { interactionUtils } from '../utils/interactionUtils';
 
 export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
-  const { login, backendUrl, setCustomBackendUrl } = useAuth();
+  const { login, backendUrl, setCustomBackendUrl, isAuthenticated } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<'Doctor' | 'Admin' | 'Compounder'>('Doctor');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -28,6 +29,17 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
   // Editable backend URL state for testing
   const [showConfig, setShowConfig] = useState(false);
   const [apiUrlInput, setApiUrlInput] = useState(backendUrl);
+
+  // Immediate redirect when authenticated
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      if (navigation?.replace) {
+        navigation.replace('Main');
+      } else if (navigation?.navigate) {
+        navigation.navigate('Main');
+      }
+    }
+  }, [isAuthenticated, navigation]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -39,6 +51,12 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
     setIsSubmitting(true);
     try {
       await login(email.trim(), password, role);
+      interactionUtils.playSuccess();
+      if (navigation?.replace) {
+        navigation.replace('Main');
+      } else if (navigation?.navigate) {
+        navigation.navigate('Main');
+      }
     } catch (err: any) {
       const msg =
         err.response?.data?.message ||
@@ -54,6 +72,12 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
             await login(email.trim(), password, alt);
             setRole(alt);
             recovered = true;
+            interactionUtils.playSuccess();
+            if (navigation?.replace) {
+              navigation.replace('Main');
+            } else if (navigation?.navigate) {
+              navigation.navigate('Main');
+            }
             break;
           } catch (altErr) {
             // continue checking
@@ -96,7 +120,7 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
             onPress={() => navigation.goBack()}
           >
             <Ionicons name="arrow-back" size={20} color={colors.primary} />
-            <Text style={{ marginLeft: 6, color: colors.primary, fontWeight: '700', fontSize: 14 }}>Back to Booking</Text>
+            <Text style={{ marginLeft: 6, color: colors.primary, fontWeight: '700', fontSize: 14 }}>Back</Text>
           </TouchableOpacity>
         )}
         <View style={styles.header}>
@@ -110,18 +134,28 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Sign In</Text>
 
-          {/* Role selector pills */}
+          {/* Role selector pills with icons */}
           <View style={styles.roleContainer}>
-            {(['Doctor', 'Admin', 'Compounder'] as const).map((r) => (
+            {([
+              { role: 'Doctor', icon: 'medical' },
+              { role: 'Admin', icon: 'shield-checkmark' },
+              { role: 'Compounder', icon: 'people' },
+            ] as const).map((item) => (
               <TouchableOpacity
-                key={r}
-                style={[styles.roleTab, role === r && styles.roleTabActive]}
-                onPress={() => setRole(r)}
+                key={item.role}
+                style={[styles.roleTab, role === item.role && styles.roleTabActive]}
+                onPress={() => setRole(item.role)}
               >
+                <Ionicons
+                  name={item.icon as any}
+                  size={14}
+                  color={role === item.role ? '#ffffff' : colors.primary}
+                  style={{ marginRight: 4 }}
+                />
                 <Text
-                  style={[styles.roleTabText, role === r && styles.roleTabTextActive]}
+                  style={[styles.roleTabText, role === item.role && styles.roleTabTextActive]}
                 >
-                  {r}
+                  {item.role}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -129,33 +163,43 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
 
           {errorMessage && (
             <View style={styles.errorBox}>
+              <Ionicons name="alert-circle" size={16} color="#dc2626" style={{ marginRight: 6 }} />
               <Text style={styles.errorText}>{errorMessage}</Text>
             </View>
           )}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="doctor@example.com"
-              placeholderTextColor="#94a3b8"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-            />
+            <View style={styles.inputWrap}>
+              <Ionicons name="mail-outline" size={18} color="#94a3b8" style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.textInputFlex}
+                placeholder="doctor@example.com"
+                placeholderTextColor="#94a3b8"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor="#94a3b8"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
+            <View style={styles.inputWrap}>
+              <Ionicons name="lock-closed-outline" size={18} color="#94a3b8" style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.textInputFlex}
+                placeholder="••••••••"
+                placeholderTextColor="#94a3b8"
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -166,7 +210,10 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
             {isSubmitting ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="log-in-outline" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+                <Text style={styles.buttonText}>Sign In</Text>
+              </View>
             )}
           </TouchableOpacity>
 
@@ -349,6 +396,22 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#475569',
     marginBottom: 6,
+  },
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 2,
+  },
+  textInputFlex: {
+    flex: 1,
+    paddingVertical: 8,
+    fontSize: 15,
+    color: '#0f172a',
   },
   input: {
     backgroundColor: '#f8fafc',

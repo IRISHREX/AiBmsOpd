@@ -377,10 +377,11 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                     </View>
 
                     <View style={styles.metaRow}>
-                      <Ionicons name="cash-outline" size={14} color={theme.goldDark} />
+                      <Ionicons name="cash-outline" size={14} color={theme.goldDark} style={{ marginRight: 4 }} />
                       <Text style={[styles.feeText, { color: theme.goldDark }]}>
-                        Visiting Fee: ₹{fee}
+                        ₹{fee}
                       </Text>
+                      <Text style={{ fontSize: 11, color: theme.textMuted, marginLeft: 4 }}>/ visit</Text>
                     </View>
                   </View>
                 </View>
@@ -389,8 +390,8 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                   style={[styles.bookBtn, { backgroundColor: theme.primary }]}
                   onPress={() => openBookingModal(item)}
                 >
-                  <Ionicons name="calendar-outline" size={16} color="#ffffff" style={{ marginRight: 6 }} />
-                  <Text style={styles.bookBtnText}>Book Referral Appointment</Text>
+                  <Ionicons name="calendar" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                  <Text style={styles.bookBtnText}>Book Appointment</Text>
                 </TouchableOpacity>
               </View>
             );

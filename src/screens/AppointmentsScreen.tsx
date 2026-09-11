@@ -437,25 +437,38 @@ export const AppointmentsScreen: React.FC = () => {
           style={styles.bookBtn}
           onPress={() => setIsCreateModalOpen(true)}
         >
-          <Text style={styles.bookBtnText}>+ Book</Text>
+          <Ionicons name="add" size={16} color="#ffffff" style={{ marginRight: 4 }} />
+          <Text style={styles.bookBtnText}>Book</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Filter Chips */}
+      {/* Filter Chips with Icons */}
       <View style={styles.filterRow}>
-        {['All', 'Pending', 'Completed', 'Rescheduled', 'Cancelled'].map((status) => (
+        {[
+          { label: 'All', icon: 'list' },
+          { label: 'Pending', icon: 'hourglass-outline' },
+          { label: 'Completed', icon: 'checkmark-circle-outline' },
+          { label: 'Rescheduled', icon: 'time-outline' },
+          { label: 'Cancelled', icon: 'close-circle-outline' },
+        ].map((item) => (
           <TouchableOpacity
-            key={status}
-            style={[styles.filterChip, statusFilter === status && styles.filterChipActive]}
-            onPress={() => setStatusFilter(status)}
+            key={item.label}
+            style={[styles.filterChip, statusFilter === item.label && styles.filterChipActive]}
+            onPress={() => setStatusFilter(item.label)}
           >
+            <Ionicons
+              name={item.icon as any}
+              size={12}
+              color={statusFilter === item.label ? '#ffffff' : '#64748b'}
+              style={{ marginRight: 4 }}
+            />
             <Text
               style={[
                 styles.filterChipText,
-                statusFilter === status && styles.filterChipTextActive,
+                statusFilter === item.label && styles.filterChipTextActive,
               ]}
             >
-              {status}
+              {item.label}
             </Text>
           </TouchableOpacity>
         ))}
@@ -485,11 +498,18 @@ export const AppointmentsScreen: React.FC = () => {
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.patientName}>{item.name || item.patientName}</Text>
-                  <Text style={styles.contactInfo}>
-                    <Ionicons name="call-outline" size={12} color="#64748b" />{' '}
-                    {item.phone || item.patientPhone || 'N/A'}{' '}
-                    {item.age || item.patientAge ? `• ${item.age || item.patientAge} yrs` : ''}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Ionicons name="call-outline" size={12} color="#64748b" style={{ marginRight: 3 }} />
+                      <Text style={styles.contactInfo}>{item.phone || item.patientPhone || 'N/A'}</Text>
+                    </View>
+                    {(item.age || item.patientAge) ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="person-outline" size={11} color="#64748b" style={{ marginRight: 2 }} />
+                        <Text style={styles.contactInfo}>{item.age || item.patientAge}y</Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
                 <View
                   style={[
@@ -501,6 +521,24 @@ export const AppointmentsScreen: React.FC = () => {
                       : styles.statusPending,
                   ]}
                 >
+                  <Ionicons
+                    name={
+                      item.status === 'Completed'
+                        ? 'checkmark-circle'
+                        : item.status === 'Cancelled'
+                        ? 'close-circle'
+                        : 'hourglass-outline'
+                    }
+                    size={11}
+                    color={
+                      item.status === 'Completed'
+                        ? '#059669'
+                        : item.status === 'Cancelled'
+                        ? '#dc2626'
+                        : '#d97706'
+                    }
+                    style={{ marginRight: 3 }}
+                  />
                   <Text style={styles.statusBadgeText}>{item.status}</Text>
                 </View>
               </View>
@@ -592,8 +630,8 @@ export const AppointmentsScreen: React.FC = () => {
                       style={[styles.cardBtn, styles.btnSuccess]}
                       onPress={() => handleStatusChange(item._id, 'Completed')}
                     >
-                      <Ionicons name="checkmark-circle-outline" size={14} color="#059669" />
-                      <Text style={styles.btnTextSuccess}> Complete</Text>
+                      <Ionicons name="checkmark-done" size={14} color="#059669" />
+                      <Text style={styles.btnTextSuccess}> Done</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.cardBtn, styles.btnSecondary]}
@@ -603,7 +641,7 @@ export const AppointmentsScreen: React.FC = () => {
                         setRescheduleSlot(item.slotTime || '11:00 AM');
                       }}
                     >
-                      <Ionicons name="time-outline" size={14} color="#475569" />
+                      <Ionicons name="calendar-outline" size={14} color="#475569" />
                       <Text style={styles.btnTextSecondary}> Reschedule</Text>
                     </TouchableOpacity>
                   </>
@@ -612,17 +650,16 @@ export const AppointmentsScreen: React.FC = () => {
                     style={[styles.cardBtn, styles.btnNewAppt]}
                     onPress={() => handleBookNewForPatient(item)}
                   >
-                    <Ionicons name="add-circle-outline" size={14} color="#b45309" />
-                    <Text style={styles.btnTextNewAppt}> Book New Appt</Text>
+                    <Ionicons name="add-circle" size={14} color="#b45309" />
+                    <Text style={styles.btnTextNewAppt}> New Appt</Text>
                   </TouchableOpacity>
                 )}
 
                 <TouchableOpacity
-                  style={[styles.cardBtn, styles.btnDanger]}
+                  style={[styles.cardBtn, styles.btnDanger, { flex: 0, paddingHorizontal: 12 }]}
                   onPress={() => handleDelete(item._id)}
                 >
                   <Ionicons name="trash-outline" size={14} color="#dc2626" />
-                  <Text style={styles.btnTextDanger}> Delete</Text>
                 </TouchableOpacity>
               </View>
             </View>

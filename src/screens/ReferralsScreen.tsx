@@ -384,11 +384,17 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
 
                   {/* Applicant Details if not self */}
                   {item.applicantBy && item.applicantBy !== 'Self' && item.applicantBy !== 'Self (Patient)' ? (
-                    <View style={{ marginTop: 6, paddingHorizontal: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, paddingHorizontal: 4, gap: 4 }}>
+                      <Ionicons name="person-outline" size={12} color={theme.goldDark} />
                       <Text style={{ fontSize: 11.5, color: theme.goldDark, fontWeight: '700' }}>
-                        👤 Applicant: {item.applicantName || item.applicantBy}
-                        {item.applicantPhone ? ` (📞 ${item.applicantPhone})` : ''}
+                        Applicant: {item.applicantName || item.applicantBy}
                       </Text>
+                      {item.applicantPhone ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 6, gap: 2 }}>
+                          <Ionicons name="call-outline" size={11} color={theme.goldDark} />
+                          <Text style={{ fontSize: 11, color: theme.goldDark }}>{item.applicantPhone}</Text>
+                        </View>
+                      ) : null}
                     </View>
                   ) : null}
 
@@ -428,7 +434,7 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
                       {isConverted ? (
                         <View style={[styles.convertedBadge, { backgroundColor: theme.successSoft, borderColor: theme.successBorder }]}>
                           <Ionicons name="checkmark-circle" size={14} color={theme.success} />
-                          <Text style={[styles.convertedBadgeText, { color: theme.success }]}>Added as Appt</Text>
+                          <Text style={[styles.convertedBadgeText, { color: theme.success }]}>Added</Text>
                         </View>
                       ) : (
                         <TouchableOpacity
@@ -441,7 +447,7 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
                           ) : (
                             <>
                               <Ionicons name="calendar" size={13} color="#ffffff" style={{ marginRight: 4 }} />
-                              <Text style={styles.addAsApptBtnText}>Add as Appointment</Text>
+                              <Text style={styles.addAsApptBtnText}>+ Add Appt</Text>
                             </>
                           )}
                         </TouchableOpacity>
