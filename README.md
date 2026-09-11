@@ -2,6 +2,8 @@
 
 A complete cross-platform React Native mobile application for the Hospital Outpatient Department (OPD) Management System, built with Expo, TypeScript, and React Navigation.
 
+> 📖 **Looking for full system run & release documentation?** See the [Complete Run & Release Guide (RUN_GUIDE.md)](./RUN_GUIDE.md).
+
 ---
 
 ## 🚀 Quickstart Guide
