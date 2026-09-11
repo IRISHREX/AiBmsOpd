@@ -1,34 +1,35 @@
-﻿{
-    "expo":  {
-                 "name":  "BMS-OPD Mobile",
-                 "slug":  "irishrex",
-                 "version":  "1.0.0.1",
-                 "orientation":  "portrait",
-                 "icon":  "./assets/icon.png",
-                 "userInterfaceStyle":  "light",
-                 "splash":  {
-                                "image":  "./assets/splash.png",
-                                "resizeMode":  "contain",
-                                "backgroundColor":  "#0ea5e9"
-                            },
-                 "ios":  {
-                             "supportsTablet":  true
-                         },
-                 "android":  {
-                                 "adaptiveIcon":  {
-                                                      "foregroundImage":  "./assets/adaptive-icon.png",
-                                                      "backgroundColor":  "#0ea5e9"
-                                                  },
-                                 "package":  "com.bms.opd"
-                             },
-                 "web":  {
-                             "favicon":  "./assets/favicon.png"
-                         },
-                 "owner":  "irishrex",
-                 "extra":  {
-                               "eas":  {
-                                           "projectId":  "4a0946f1-cd14-4c24-8dae-e520c63e2122"
-                                       }
-                           }
-             }
+{
+  "expo": {
+    "name": "BMS-OPD Mobile",
+    "slug": "irishrex",
+    "version": "1.0.0.2",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0ea5e9"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0ea5e9"
+      },
+      "package": "com.bms.opd",
+      "versionCode": 2
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "owner": "irishrex",
+    "extra": {
+      "eas": {
+        "projectId": "4a0946f1-cd14-4c24-8dae-e520c63e2122"
+      }
+    }
+  }
 }
