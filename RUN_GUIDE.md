@@ -208,3 +208,90 @@ adb install -r c:\PROJECTS\AiBmsOpd\bms-opd-release.apk
   powershell -ExecutionPolicy Bypass -File scripts\release.ps1
   ```
   Or run `npm run release` or `release.bat`.
+
+---
+
+## 8. How the Build is Made & APK is Created
+
+There are two primary ways to create an Android APK from this codebase:
+
+### 🌟 Approach A: Automated Hybrid Build (Recommended — Current Setup)
+This is the approach used by `release.bat` and `scripts/release.ps1`:
+
+```
+┌─────────────────────────┐       ┌────────────────────────┐       ┌────────────────────────┐
+│  Your Local PC          │       │  Expo EAS Cloud        │       │  Your Local PC         │
+│  - Checks TypeScript    │ ────> │  - Linux Container     │ ────> │  - Downloads final APK │
+│  - Bumps v1.0.0.X       │       │  - JDK 17 & SDK 34     │       │  - Saves as:           │
+│  - Commits to Git       │       │  - Gradle compiles APK │       │    bms-opd-v1.0.0.X.apk│
+└─────────────────────────┘       └────────────────────────┘       │    bms-opd-release.apk │
+                                                                   └────────────────────────┘
+```
+
+#### Why this is recommended:
+- **Zero Local Toolchain Setup**: React Native 0.74 (Expo SDK 51) requires **Java JDK 17**, **Android SDK Platform 34**, and **Android NDK**. Your Windows PC does not need to install ~15 GB of Android Studio or configure complex environment variables.
+- **Identical Clean Environment**: Avoids Windows path length limits (`MAX_PATH`) and local Gradle daemon cache corruption.
+- **Local Output File**: Even though compiled in EAS Cloud, the script **automatically downloads the completed `.apk` binary straight to your local PC**:
+  - `c:\PROJECTS\AiBmsOpd\bms-opd-v1.0.0.X.apk` (Versioned archive)
+  - `c:\PROJECTS\AiBmsOpd\bms-opd-release.apk` (Latest release pointer)
+
+---
+
+### 💻 Approach B: 100% Local Machine Build (Pure Offline Build)
+
+If you wish to compile the APK entirely on your local Windows hardware without using cloud servers:
+
+#### 1. Prerequisites Required on Your PC
+1. **Java Development Kit 17 (JDK 17)**:
+   - Download and install **OpenJDK 17** or **Eclipse Temurin 17** (JDK 8 or JRE will not work).
+   - Set environment variable: `JAVA_HOME` = `C:\Program Files\Eclipse Adoptium\jdk-17.x.x`
+   - Add `%JAVA_HOME%\bin` to your System `PATH`.
+   - Verify in terminal: `javac -version` (must output `javac 17.x.x`).
+2. **Android Studio & Android SDK**:
+   - Install Android Studio.
+   - Open Android Studio ➔ **SDK Manager**:
+     - Install **Android 14.0 (API 34)** SDK Platform.
+     - Under SDK Tools: check **Android SDK Build-Tools 34.0.0**, **Android SDK Command-line Tools**, and **Android SDK Platform-Tools**.
+   - Set environment variable: `ANDROID_HOME` = `C:\Users\<YourUser>\AppData\Local\Android\Sdk`
+   - Add `%ANDROID_HOME%\platform-tools` and `%ANDROID_HOME%\cmdline-tools\latest\bin` to `PATH`.
+
+#### 2. Local Build Commands
+
+##### Method 1: EAS Local Build
+Run EAS build with the `--local` flag in PowerShell:
+```powershell
+npx eas-cli build --platform android --profile preview --local
+```
+*(EAS CLI will invoke local Android SDK / Gradle and output the APK in your working directory).*
+
+##### Method 2: Direct Gradle Build (Native Android Project)
+Because the `android` directory is already prebuilt in your project:
+```powershell
+# 1. Navigate to android folder
+cd c:\PROJECTS\AiBmsOpd\android
+
+# 2. Compile Release APK using Gradle wrapper
+.\gradlew.bat assembleRelease
+
+# 3. Or compile Debug APK (faster, unsigned)
+.\gradlew.bat assembleDebug
+```
+
+#### Where the Local APK is Created:
+- **Release APK**:
+  `c:\PROJECTS\AiBmsOpd\android\app\build\outputs\apk\release\app-release.apk`
+- **Debug APK**:
+  `c:\PROJECTS\AiBmsOpd\android\app\build\outputs\apk\debug\app-debug.apk`
+
+---
+
+### 📊 Summary Comparison
+
+| Feature | Approach A (Current `release.bat`) | Approach B (100% Local Machine) |
+| :--- | :--- | :--- |
+| **Command** | `release.bat` or `npm run release` | `cd android && .\gradlew.bat assembleRelease` |
+| **Local Disk Space Needed** | **~0 GB** (no SDK needed) | **~15–20 GB** (JDK 17, Android Studio, SDK 34) |
+| **Setup Effort** | **Instant** (ready right now) | Requires JDK 17, SDK 34, `JAVA_HOME`, `ANDROID_HOME` |
+| **Version Tracking** | **Automatic** (`v1.0.0.1`, `v1.0.0.2`...) | Manual version update in `app.json` |
+| **Local APK Location** | `c:\PROJECTS\AiBmsOpd\bms-opd-release.apk` | `android\app\build\outputs\apk\release\app-release.apk` |
+
