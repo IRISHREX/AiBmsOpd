@@ -90,6 +90,15 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {navigation?.canGoBack && navigation.canGoBack() && (
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', marginBottom: 12, paddingVertical: 6 }}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={20} color={colors.primary} />
+            <Text style={{ marginLeft: 6, color: colors.primary, fontWeight: '700', fontSize: 14 }}>Back to Booking</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.header}>
           <View style={styles.logoBadge}>
             <Text style={styles.logoText}>OPD</Text>

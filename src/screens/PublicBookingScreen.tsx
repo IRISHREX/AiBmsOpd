@@ -22,6 +22,7 @@ import apiClient from '../api/client';
 import { interactionUtils } from '../utils/interactionUtils';
 import { useTheme } from '../context/ThemeContext';
 import { colors } from '../theme/colors';
+import { useAuth } from '../context/AuthContext';
 
 const APPLICANT_TYPES = [
   'Self (Patient)',
@@ -55,9 +56,11 @@ const ANY_DOCTOR: Doctor = {
 
 export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const { colors: theme } = useTheme();
+  const { isAuthenticated } = useAuth();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Booking Modal State
@@ -83,10 +86,12 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
 
   const fetchDoctors = useCallback(async () => {
     try {
+      setLoadError(null);
       const data = await doctorsApi.getAll();
       setDoctors(data);
     } catch (e: any) {
       console.warn('Failed to load doctors for booking:', e);
+      setLoadError(e?.message || 'Unable to connect to server. Please tap to retry.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -198,11 +203,15 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
             style={[styles.loginBtn, { backgroundColor: theme.primary, borderColor: theme.gold }]}
             onPress={() => {
               interactionUtils.playClick();
-              navigation.navigate('Login');
+              if (isAuthenticated) {
+                navigation.navigate('Main');
+              } else {
+                navigation.navigate('Login');
+              }
             }}
           >
-            <Ionicons name="log-in-outline" size={17} color="#ffffff" style={{ marginRight: 6 }} />
-            <Text style={styles.loginBtnText}>Staff Login</Text>
+            <Ionicons name={isAuthenticated ? "grid-outline" : "log-in-outline"} size={17} color="#ffffff" style={{ marginRight: 6 }} />
+            <Text style={styles.loginBtnText}>{isAuthenticated ? "Staff Dashboard" : "Staff Login"}</Text>
           </TouchableOpacity>
 
           <View style={styles.headerRightActions}>
@@ -299,10 +308,27 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
             </View>
           }
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="fitness-outline" size={48} color={theme.textMuted} style={{ marginBottom: 8 }} />
-              <Text style={[styles.emptyText, { color: theme.textMuted }]}>No doctors matching query</Text>
-            </View>
+            loadError ? (
+              <View style={styles.empty}>
+                <Ionicons name="cloud-offline-outline" size={48} color={theme.danger} style={{ marginBottom: 8 }} />
+                <Text style={[styles.emptyText, { color: theme.danger, fontWeight: '700' }]}>Connection Error</Text>
+                <Text style={{ color: theme.textSecondary, textAlign: 'center', marginVertical: 6, fontSize: 12 }}>
+                  {loadError}
+                </Text>
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, marginTop: 8 }}
+                  onPress={fetchDoctors}
+                >
+                  <Ionicons name="refresh-outline" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 13 }}>Retry Connection</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.empty}>
+                <Ionicons name="fitness-outline" size={48} color={theme.textMuted} style={{ marginBottom: 8 }} />
+                <Text style={[styles.emptyText, { color: theme.textMuted }]}>No doctors matching query</Text>
+              </View>
+            )
           }
           renderItem={({ item }) => {
             const docDisplayName = item.name || `Dr. ${item.firstName || ''} ${item.lastName || ''}`;

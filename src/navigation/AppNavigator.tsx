@@ -128,6 +128,7 @@ export const AppNavigator: React.FC = () => {
         ) : (
           <>
             <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="MedicineStore" component={MedicineStoreScreen} options={{ headerShown: true, title: 'Medicine Store' }} />
             <Stack.Screen name="Compounders" component={CompoundersScreen} options={{ headerShown: true, title: 'Compounders & Staff' }} />
             <Stack.Screen name="Reports" component={ReportsScreen} options={{ headerShown: true, title: 'Patient Reports' }} />

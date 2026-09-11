@@ -19,10 +19,13 @@ export const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// Interceptor: inject Bearer token into outgoing requests
+// Interceptor: inject Bearer token into outgoing requests and safeguard against localhost on devices
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     try {
+      if (!config.baseURL || config.baseURL.includes('localhost') || config.baseURL.includes('127.0.0.1')) {
+        config.baseURL = 'https://bms-opd-be.onrender.com';
+      }
       const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
       if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
