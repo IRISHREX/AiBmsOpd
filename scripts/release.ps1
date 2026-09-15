@@ -8,7 +8,7 @@ param(
     [string]$Version = ""
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $ProjectRoot = "c:\PROJECTS\AiBmsOpd"
 Set-Location $ProjectRoot
 
@@ -114,7 +114,7 @@ if ($status) {
 Write-Host ""
 Write-Host "[4/5] Triggering EAS Cloud Android Build (APK)..." -ForegroundColor Yellow
 
-$buildRaw = npx eas-cli build --platform android --profile preview --non-interactive --json 2>&1
+$buildRaw = npx eas-cli build --platform android --profile preview --non-interactive --no-wait --json 2>&1
 $buildOutput = ($buildRaw | Out-String)
 
 $buildId = ""
