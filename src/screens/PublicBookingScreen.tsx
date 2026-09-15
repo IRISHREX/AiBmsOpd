@@ -23,7 +23,7 @@ import { interactionUtils } from '../utils/interactionUtils';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { resetToMain } from '../navigation/AppNavigator';
-import { REFERRAL_TRANSLATIONS, ReferralLanguage } from '../utils/referralTranslations';
+import { ReferralLanguage } from '../utils/referralTranslations';
 
 const TIME_SLOTS = [
   '09:30 AM',
@@ -37,13 +37,13 @@ const TIME_SLOTS = [
 
 const ANY_DOCTOR: Doctor = {
   _id: '',
-  name: 'Any Available Specialist / Fast Triage',
+  name: 'Any Available Doctor / Fast Triage',
   email: 'opd@hospital.local',
   role: 'doctor',
-  doctorDepartment: 'General Medicine & Triage',
-  specialization: 'General OPD / All On-Duty Physicians',
+  doctorDepartment: 'General OPD & Triage',
+  specialization: 'General OPD / On-Duty Clinician',
   visitingFee: 500,
-  qualifications: 'MBBS / Registered Medical Practitioner',
+  qualifications: 'MBBS / General Physician',
   phone: 'OPD Helpline',
 };
 
@@ -62,17 +62,16 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
 
   // Multilingual Support
   const [lang, setLang] = useState<ReferralLanguage>('en');
-  const t = REFERRAL_TRANSLATIONS[lang];
 
-  // Booking Modal State (Opens when clicking "Book Appointment" on any doctor card)
+  // Booking Modal State
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Booking Type: Self vs Someone Else (Referral)
+  // Booking Mode: Self vs Someone Else (Referral)
   const [isBookingForSomeoneElse, setIsBookingForSomeoneElse] = useState(false);
 
-  // Referrer / Booker details (For "Someone Else")
+  // Booker / Referrer details (For "Someone Else")
   const [bookerName, setBookerName] = useState('');
   const [bookerPhone, setBookerPhone] = useState('');
   const [bookerEmail, setBookerEmail] = useState('');
@@ -90,7 +89,7 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
   const [appointmentDate, setAppointmentDate] = useState(new Date().toISOString().split('T')[0]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [appointmentSlot, setAppointmentSlot] = useState(TIME_SLOTS[0]);
-  const [urgency, setUrgency] = useState<'routine' | 'general' | 'urgent' | 'emergency'>('general');
+  const [urgency, setUrgency] = useState<'routine' | 'general' | 'emergency'>('general');
 
   // Pre-fill logged in user info for booker
   useEffect(() => {
@@ -105,6 +104,7 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
   useEffect(() => {
     const onBackPress = () => {
       if (isBookingOpen) {
+        interactionUtils.playDelete();
         setIsBookingOpen(false);
         return true;
       }
@@ -128,7 +128,7 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
       setDoctors(list);
     } catch (e: any) {
       console.warn('Failed to fetch doctors list:', e);
-      setLoadError('Unable to connect to OPD server. Please check your internet.');
+      setLoadError('Unable to connect to OPD server.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -184,6 +184,11 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
     setIsBookingOpen(true);
   };
 
+  const closeDoctorModal = () => {
+    interactionUtils.playDelete();
+    setIsBookingOpen(false);
+  };
+
   // Submit appointment & referral booking
   const handleBookingSubmit = async () => {
     const cleanPatientName = patientName.trim();
@@ -191,53 +196,43 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
     const cleanAddress = patientAddress.trim();
     const cleanSymptoms = symptoms.trim();
 
-    // Validation: Patient Name
     if (!cleanPatientName) {
-      Alert.alert('Required Field', t.validationNameRequired);
+      Alert.alert('Required', 'Please enter patient name');
       return;
     }
 
-    // Validation: Patient Phone (10 digits)
     if (!/^[0-9]{10}$/.test(cleanPatientPhone)) {
-      Alert.alert('Invalid Phone', t.validationPhoneInvalid);
+      Alert.alert('Invalid Phone', 'Please enter 10-digit mobile number');
       return;
     }
 
-    // Validation: Age (0 - 150)
     if (patientAge) {
       const numAge = Number(patientAge);
       if (isNaN(numAge) || numAge < 0 || numAge > 150) {
-        Alert.alert('Invalid Age', t.validationAgeInvalid);
+        Alert.alert('Invalid Age', 'Please enter a valid age (0–150)');
         return;
       }
     }
 
-    // Validation: Address
     if (!cleanAddress) {
-      Alert.alert('Required Field', t.validationAddressRequired);
+      Alert.alert('Required', 'Please enter patient address/city');
       return;
     }
 
-    // Validation: Problem / Symptoms
     if (!cleanSymptoms) {
-      Alert.alert('Required Field', t.validationProblemRequired);
+      Alert.alert('Required', 'Please enter medical symptoms or problem');
       return;
     }
 
-    // Validation: Booker details if booking for someone else
     let cleanBookerPhone = '';
     if (isBookingForSomeoneElse) {
       if (!bookerName.trim()) {
-        Alert.alert('Referrer Name Required', t.validationBookerNameRequired);
+        Alert.alert('Required', 'Please enter your name as referrer');
         return;
       }
       cleanBookerPhone = bookerPhone.trim().replace(/[^0-9]/g, '');
-      if (!cleanBookerPhone) {
-        Alert.alert('Referrer Phone Required', t.validationBookerPhoneInvalid);
-        return;
-      }
       if (!/^[0-9]{10}$/.test(cleanBookerPhone)) {
-        Alert.alert('Invalid Phone', t.validationBookerPhoneInvalid);
+        Alert.alert('Invalid Phone', 'Please enter 10-digit referrer phone number');
         return;
       }
     }
@@ -246,7 +241,7 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
       setIsSubmitting(true);
       const isAny = !selectedDoctor?._id;
       const doctorDisplayName = isAny
-        ? 'Any Available Specialist / Fast Triage'
+        ? 'Any Available Doctor / Fast Triage'
         : (selectedDoctor?.name || `Dr. ${selectedDoctor?.firstName || ''} ${selectedDoctor?.lastName || ''}`.trim());
 
       const payload = {
@@ -265,26 +260,23 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
         applicantName: isBookingForSomeoneElse ? bookerName.trim() : cleanPatientName,
         applicantPhone: isBookingForSomeoneElse ? cleanBookerPhone : cleanPatientPhone,
         applicantEmail: isBookingForSomeoneElse ? bookerEmail.trim() : (patientEmail.trim() || undefined),
-        urgency: urgency === 'urgent' ? 'emergency' : urgency,
+        urgency,
         symptoms: cleanSymptoms,
         clinicalNotes: cleanSymptoms,
         commissionPercent: 5,
       };
 
-      // Play "woooosh" sound on referral submission
       interactionUtils.playWoosh();
 
       const res = await referralsApi.bookPatient(payload);
       interactionUtils.playSuccess();
 
-      // If a guest referral account token was generated, log them in automatically
       if (res.token && res.user && !isAuthenticated) {
         await loginWithToken(res.token, res.user);
       }
 
       setIsBookingOpen(false);
 
-      // Reset form fields
       setPatientName('');
       setPatientPhone('');
       setPatientEmail('');
@@ -292,17 +284,17 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
       setPatientAge('');
       setSymptoms('');
 
-      let msg = `Your appointment referral with ${doctorDisplayName} has been confirmed!\n\nPriority: ${urgency.toUpperCase()}`;
+      let msg = `Appointment confirmed with ${doctorDisplayName}.\nPriority: ${urgency.toUpperCase()}`;
       if (res.tempPassword) {
-        msg += `\n\n🔑 ${t.tempPassNotice}: ${res.tempPassword}\n(Use this to log in to your Referrals portal anytime).`;
+        msg += `\n\n🔑 Referrer Pass: ${res.tempPassword}`;
       }
 
       Alert.alert(
-        t.successTitle,
+        'Booking Confirmed',
         msg,
         [
           {
-            text: 'View Referrals Portal',
+            text: 'View Portal',
             onPress: () => {
               if (isAuthenticated || res.token) {
                 navigation.navigate('Main', { screen: 'Referrals' });
@@ -311,14 +303,11 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
               }
             },
           },
-          {
-            text: 'Done',
-            style: 'cancel',
-          },
+          { text: 'Done', style: 'cancel' },
         ]
       );
     } catch (e: any) {
-      Alert.alert('Booking Error', e?.response?.data?.message || e?.message || 'Failed to submit appointment booking.');
+      Alert.alert('Booking Error', e?.response?.data?.message || e?.message || 'Failed to submit appointment.');
     } finally {
       setIsSubmitting(false);
     }
@@ -326,9 +315,9 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* 🌟 TOP NAVIGATION BAR */}
+      {/* 🌟 SLEEK COMPACT TOP BAR */}
       <View style={[styles.topBar, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-        {/* Top Left: Staff / Member Login Option */}
+        {/* Left: Staff Login */}
         <TouchableOpacity
           style={[styles.loginBtn, { backgroundColor: theme.primary, borderColor: theme.gold }]}
           onPress={() => {
@@ -339,18 +328,17 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
               navigation.navigate('Login');
             }
           }}
-          accessibilityLabel="Login"
         >
           <Ionicons
             name={isAuthenticated ? 'home' : 'log-in-outline'}
-            size={16}
+            size={14}
             color="#ffffff"
-            style={{ marginRight: 6 }}
+            style={{ marginRight: 4 }}
           />
           <Text style={styles.loginBtnText}>{isAuthenticated ? 'Dashboard' : 'Staff Login'}</Text>
         </TouchableOpacity>
 
-        {/* Center: Language Selector Pills */}
+        {/* Center: Language Pills */}
         <View style={styles.langSelectorRow}>
           {(['en', 'bn', 'hi', 'ur'] as ReferralLanguage[]).map((l) => (
             <TouchableOpacity
@@ -378,14 +366,14 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
           ))}
         </View>
 
-        {/* Top Right: Hospital Badge */}
+        {/* Right: Hospital Badge */}
         <View style={[styles.hospitalBadge, { backgroundColor: theme.goldSoft, borderColor: theme.goldBorder }]}>
-          <Ionicons name="shield-checkmark" size={13} color={theme.goldDark} />
+          <Ionicons name="shield-checkmark" size={11} color={theme.goldDark} />
           <Text style={[styles.hospitalBadgeText, { color: theme.goldDark }]}>BMS OPD</Text>
         </View>
       </View>
 
-      {/* 🌟 SCROLLABLE MAIN BODY: DIRECT DOCTOR CARDS LIST */}
+      {/* 🌟 SCROLLABLE MAIN BODY: COMPACT DOCTOR DIRECTORY */}
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -398,34 +386,24 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
           />
         }
       >
-        {/* Welcome Header */}
-        <View style={styles.welcomeBanner}>
-          <Text style={[styles.pageHeading, { color: theme.textPrimary }]}>
-            Find a Doctor & Book Appointment
-          </Text>
-          <Text style={[styles.pageSubheading, { color: theme.textMuted }]}>
-            Choose a specialist doctor below or select Fast Triage for immediate OPD assignment.
-          </Text>
-        </View>
-
-        {/* Search Input Bar */}
+        {/* Compact Search Bar */}
         <View style={[styles.searchContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-          <Ionicons name="search-outline" size={18} color={theme.textMuted} style={{ marginRight: 8 }} />
+          <Ionicons name="search-outline" size={16} color={theme.textMuted} style={{ marginRight: 6 }} />
           <TextInput
             style={[styles.searchInput, { color: theme.textPrimary }]}
-            placeholder="Search doctors, specialization, department..."
+            placeholder="Search doctor or specialty..."
             placeholderTextColor={theme.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={theme.textMuted} />
+            <TouchableOpacity onPress={() => { interactionUtils.playDelete(); setSearchQuery(''); }}>
+              <Ionicons name="close-circle" size={15} color={theme.textMuted} />
             </TouchableOpacity>
           ) : null}
         </View>
 
-        {/* Department / Category Filter Pills */}
+        {/* Compact Department Category Pills */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -463,50 +441,47 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
         {/* ⚡ CARD 1: Fast Triage / Any Available Doctor */}
         <View style={[styles.anyDoctorCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.gold }]}>
           <View style={styles.cardHeader}>
-            <View style={[styles.avatarCircle, { backgroundColor: theme.goldSoft, borderColor: theme.gold }]}>
-              <Ionicons name="flash" size={24} color={theme.goldDark} />
+            <View style={[styles.avatarCircleSmall, { backgroundColor: theme.goldSoft, borderColor: theme.gold }]}>
+              <Ionicons name="flash" size={18} color={theme.goldDark} />
             </View>
             <View style={styles.doctorInfo}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={[styles.doctorName, { color: theme.textPrimary }]}>Any Available Doctor</Text>
                 <View style={[styles.fastBadge, { backgroundColor: theme.goldSoft, borderColor: theme.goldBorder }]}>
-                  <Text style={[styles.fastBadgeText, { color: theme.goldDark }]}>⚡ Fastest</Text>
+                  <Text style={[styles.fastBadgeText, { color: theme.goldDark }]}>⚡ Fast</Text>
                 </View>
               </View>
               <Text style={[styles.specialty, { color: theme.primary }]}>
-                General OPD & Urgent Clinical Triage
-              </Text>
-              <Text style={[styles.deptText, { color: theme.textSecondary }]}>
-                Assigned automatically to the first available physician on duty.
+                General OPD & Immediate Triage
               </Text>
               <View style={styles.feeBadgeRow}>
-                <Ionicons name="cash-outline" size={14} color={theme.goldDark} />
-                <Text style={[styles.feeText, { color: theme.goldDark }]}>Standard Fee: ₹500</Text>
+                <Ionicons name="cash-outline" size={12} color={theme.goldDark} />
+                <Text style={[styles.feeText, { color: theme.goldDark }]}>₹500</Text>
               </View>
             </View>
           </View>
 
           <TouchableOpacity
-            style={[styles.bookBtn, { backgroundColor: theme.goldDark }]}
+            style={[styles.bookBtnSmall, { backgroundColor: theme.goldDark }]}
             onPress={() => openDoctorModal(ANY_DOCTOR)}
           >
-            <Ionicons name="calendar" size={16} color="#ffffff" style={{ marginRight: 6 }} />
-            <Text style={styles.bookBtnText}>Book Fast Triage Appointment</Text>
+            <Ionicons name="calendar" size={13} color="#ffffff" style={{ marginRight: 4 }} />
+            <Text style={styles.bookBtnText}>Fast Book</Text>
           </TouchableOpacity>
         </View>
 
         {/* Loading Spinner */}
         {isLoading && (
           <View style={styles.stateCenter}>
-            <ActivityIndicator size="large" color={theme.primary} />
-            <Text style={[styles.stateText, { color: theme.textMuted }]}>Loading OPD doctors...</Text>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <Text style={[styles.stateText, { color: theme.textMuted }]}>Loading doctors...</Text>
           </View>
         )}
 
         {/* Load Error */}
         {loadError && !isLoading && (
           <View style={[styles.errorBox, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-            <Ionicons name="alert-circle-outline" size={28} color="#ef4444" />
+            <Ionicons name="alert-circle-outline" size={22} color="#ef4444" />
             <Text style={[styles.errorText, { color: theme.textPrimary }]}>{loadError}</Text>
             <TouchableOpacity style={[styles.retryBtn, { backgroundColor: theme.primary }]} onPress={loadDoctors}>
               <Text style={styles.retryBtnText}>Retry</Text>
@@ -517,8 +492,8 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
         {/* Empty Search State */}
         {!isLoading && filteredDoctors.length === 0 && !loadError && (
           <View style={styles.stateCenter}>
-            <Ionicons name="person-outline" size={40} color={theme.textMuted} />
-            <Text style={[styles.stateText, { color: theme.textMuted }]}>No doctors found matching your search.</Text>
+            <Ionicons name="person-outline" size={32} color={theme.textMuted} />
+            <Text style={[styles.stateText, { color: theme.textMuted }]}>No doctors found.</Text>
           </View>
         )}
 
@@ -534,8 +509,8 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
               <View key={doc._id} style={[styles.card, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
                 <View style={styles.cardHeader}>
                   {/* Doctor Avatar */}
-                  <View style={[styles.avatarCircle, { backgroundColor: theme.primaryDark, borderColor: theme.gold }]}>
-                    <Text style={[styles.avatarText, { color: theme.goldBright }]}>{initial}</Text>
+                  <View style={[styles.avatarCircleSmall, { backgroundColor: theme.primaryDark, borderColor: theme.gold }]}>
+                    <Text style={[styles.avatarTextSmall, { color: theme.goldBright }]}>{initial}</Text>
                   </View>
 
                   {/* Doctor Info */}
@@ -544,36 +519,34 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                     
                     <View style={styles.badgeRow}>
                       <View style={[styles.tagBadge, { backgroundColor: theme.primarySoft, borderColor: theme.primary }]}>
-                        <Ionicons name="medkit-outline" size={11} color={theme.primary} />
+                        <Ionicons name="medkit-outline" size={10} color={theme.primary} />
                         <Text style={[styles.tagBadgeText, { color: theme.primary }]}>{dept}</Text>
                       </View>
                       <View style={[styles.ratingBadge, { backgroundColor: '#fef3c7', borderColor: '#fcd34d' }]}>
-                        <Ionicons name="star" size={11} color="#d97706" />
+                        <Ionicons name="star" size={10} color="#d97706" />
                         <Text style={styles.ratingText}>4.8</Text>
                       </View>
                     </View>
 
                     {doc.specialization ? (
-                      <Text style={[styles.specialty, { color: theme.textSecondary }]}>{doc.specialization}</Text>
-                    ) : null}
-
-                    {doc.qualifications ? (
-                      <Text style={[styles.qualifications, { color: theme.textMuted }]}>{doc.qualifications}</Text>
+                      <Text style={[styles.specialty, { color: theme.textSecondary }]} numberOfLines={1}>
+                        {doc.specialization}
+                      </Text>
                     ) : null}
 
                     <View style={styles.feeBadgeRow}>
-                      <Ionicons name="cash-outline" size={13} color={theme.goldDark} />
-                      <Text style={[styles.feeText, { color: theme.goldDark }]}>Fee: ₹{fee}</Text>
+                      <Ionicons name="cash-outline" size={12} color={theme.goldDark} />
+                      <Text style={[styles.feeText, { color: theme.goldDark }]}>₹{fee}</Text>
                     </View>
                   </View>
                 </View>
 
-                {/* Prominent "Book Appointment" Button on Every Card */}
+                {/* Compact "Book Appointment" Button */}
                 <TouchableOpacity
-                  style={[styles.bookBtn, { backgroundColor: theme.primary }]}
+                  style={[styles.bookBtnSmall, { backgroundColor: theme.primary }]}
                   onPress={() => openDoctorModal(doc)}
                 >
-                  <Ionicons name="calendar-outline" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                  <Ionicons name="calendar-outline" size={13} color="#ffffff" style={{ marginRight: 5 }} />
                   <Text style={styles.bookBtnText}>Book Appointment</Text>
                 </TouchableOpacity>
               </View>
@@ -581,8 +554,8 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
           })}
       </ScrollView>
 
-      {/* 🌟 DEDICATED APPOINTMENT BOOKING MODAL */}
-      <Modal visible={isBookingOpen} animationType="slide" transparent onRequestClose={() => setIsBookingOpen(false)}>
+      {/* 🌟 STREAMLINED, ICON-DRIVEN BOOKING MODAL (LESS WORDS, MORE ICONS) */}
+      <Modal visible={isBookingOpen} animationType="slide" transparent onRequestClose={closeDoctorModal}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.modalOverlay}
@@ -591,28 +564,22 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
             {/* Modal Header */}
             <View style={[styles.modalHeader, { borderBottomColor: theme.border }]}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
-                  {selectedDoctor?._id
-                    ? `Book with ${selectedDoctor?.name || 'Doctor'}`
-                    : 'Fast Triage Booking'}
+                <Text style={[styles.modalTitle, { color: theme.textPrimary }]} numberOfLines={1}>
+                  {selectedDoctor?._id ? (selectedDoctor?.name || 'Doctor Booking') : 'Fast Triage Booking'}
                 </Text>
                 <Text style={[styles.modalSubtitle, { color: theme.goldDark }]}>
-                  {selectedDoctor?.doctorDepartment || 'General OPD'} • Consultation Fee: ₹{selectedDoctor?.visitingFee || 500}
+                  Fee: ₹{selectedDoctor?.visitingFee || 500}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setIsBookingOpen(false)} style={styles.closeBtn}>
-                <Ionicons name="close" size={24} color={theme.textSecondary} />
+              <TouchableOpacity onPress={closeDoctorModal} style={styles.closeBtn}>
+                <Ionicons name="close" size={20} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-              {/* 👥 STEP 1: BOOK FOR SELF OR SOMEONE ELSE */}
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary }]}>
-                1. Who is this appointment for?
-              </Text>
-
+              {/* 👥 TOGGLE: 👤 Self vs 👥 Someone Else */}
               <View style={[styles.bookingToggleContainer, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}>
-                {/* Book for Self */}
+                {/* Self */}
                 <TouchableOpacity
                   style={[
                     styles.toggleSegment,
@@ -625,9 +592,9 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                 >
                   <Ionicons
                     name="person"
-                    size={15}
+                    size={14}
                     color={!isBookingForSomeoneElse ? '#ffffff' : theme.textSecondary}
-                    style={{ marginRight: 6 }}
+                    style={{ marginRight: 5 }}
                   />
                   <Text
                     style={[
@@ -636,11 +603,11 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                       !isBookingForSomeoneElse && { fontWeight: '800' },
                     ]}
                   >
-                    {t.bookingForSelf}
+                    Self
                   </Text>
                 </TouchableOpacity>
 
-                {/* Book for Someone Else */}
+                {/* Someone Else */}
                 <TouchableOpacity
                   style={[
                     styles.toggleSegment,
@@ -653,9 +620,9 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                 >
                   <Ionicons
                     name="people"
-                    size={15}
+                    size={14}
                     color={isBookingForSomeoneElse ? '#ffffff' : theme.textSecondary}
-                    style={{ marginRight: 6 }}
+                    style={{ marginRight: 5 }}
                   />
                   <Text
                     style={[
@@ -664,138 +631,109 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                       isBookingForSomeoneElse && { fontWeight: '800' },
                     ]}
                   >
-                    {t.bookingForSomeoneElse}
+                    Someone Else
                   </Text>
                 </TouchableOpacity>
               </View>
 
-              {/* 👥 STEP 2 (CONDITIONAL): REFERRER DETAILS IF SOMEONE ELSE */}
+              {/* 👥 REFERRER BOX IF "SOMEONE ELSE" */}
               {isBookingForSomeoneElse && (
                 <View style={[styles.bookerCard, { backgroundColor: theme.surfaceElevated, borderColor: theme.goldBorder }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <Text style={[styles.bookerSectionHeading, { color: theme.goldDark }]}>
-                      {t.bookerSectionTitle}
+                      Referrer Details
                     </Text>
                     {isAuthenticated ? (
                       <View style={[styles.autofillBadge, { backgroundColor: '#dcfce7' }]}>
-                        <Ionicons name="checkmark-circle" size={12} color="#16a34a" style={{ marginRight: 3 }} />
-                        <Text style={[styles.autofillBadgeText, { color: '#16a34a' }]}>Verified Referrer</Text>
+                        <Ionicons name="checkmark-circle" size={11} color="#16a34a" style={{ marginRight: 2 }} />
+                        <Text style={[styles.autofillBadgeText, { color: '#16a34a' }]}>Verified</Text>
                       </View>
                     ) : (
                       <View style={[styles.autofillBadge, { backgroundColor: theme.goldSoft }]}>
-                        <Text style={[styles.autofillBadgeText, { color: theme.goldDark }]}>Earn 5% Commission</Text>
+                        <Text style={[styles.autofillBadgeText, { color: theme.goldDark }]}>5% Commission</Text>
                       </View>
                     )}
                   </View>
 
-                  {!isAuthenticated ? (
-                    <Text style={[styles.bookerHint, { color: theme.textMuted }]}>
-                      Enter your details below. A referrer account will be automatically created so you can track this patient and earn commission.
-                    </Text>
-                  ) : null}
-
-                  {/* Referrer Name */}
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>{t.bookerNameLabel}</Text>
                   <TextInput
                     style={[
                       styles.inputField,
                       { backgroundColor: theme.cardBg, borderColor: theme.border, color: theme.textPrimary },
                       isAuthenticated && { opacity: 0.85 },
                     ]}
-                    placeholder={t.bookerNamePlaceholder}
+                    placeholder="Your Full Name"
                     placeholderTextColor={theme.textMuted}
                     editable={!isAuthenticated}
                     value={bookerName}
                     onChangeText={setBookerName}
                   />
 
-                  {/* Referrer Phone & Email */}
                   <View style={styles.fieldRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>{t.bookerPhoneLabel}</Text>
-                      <TextInput
-                        style={[
-                          styles.inputField,
-                          { backgroundColor: theme.cardBg, borderColor: theme.border, color: theme.textPrimary },
-                          isAuthenticated && { opacity: 0.85 },
-                        ]}
-                        placeholder={t.bookerPhonePlaceholder}
-                        placeholderTextColor={theme.textMuted}
-                        keyboardType="phone-pad"
-                        maxLength={10}
-                        editable={!isAuthenticated}
-                        value={bookerPhone}
-                        onChangeText={setBookerPhone}
-                      />
-                    </View>
+                    <TextInput
+                      style={[
+                        styles.inputField,
+                        { flex: 1, backgroundColor: theme.cardBg, borderColor: theme.border, color: theme.textPrimary },
+                        isAuthenticated && { opacity: 0.85 },
+                      ]}
+                      placeholder="Your 10-Digit Mobile"
+                      placeholderTextColor={theme.textMuted}
+                      keyboardType="phone-pad"
+                      maxLength={10}
+                      editable={!isAuthenticated}
+                      value={bookerPhone}
+                      onChangeText={setBookerPhone}
+                    />
 
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>{t.bookerEmailLabel}</Text>
-                      <TextInput
-                        style={[
-                          styles.inputField,
-                          { backgroundColor: theme.cardBg, borderColor: theme.border, color: theme.textPrimary },
-                          isAuthenticated && { opacity: 0.85 },
-                        ]}
-                        placeholder={t.bookerEmailPlaceholder}
-                        placeholderTextColor={theme.textMuted}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        editable={!isAuthenticated}
-                        value={bookerEmail}
-                        onChangeText={setBookerEmail}
-                      />
-                    </View>
+                    <TextInput
+                      style={[
+                        styles.inputField,
+                        { flex: 1, backgroundColor: theme.cardBg, borderColor: theme.border, color: theme.textPrimary },
+                        isAuthenticated && { opacity: 0.85 },
+                      ]}
+                      placeholder="Email (Optional)"
+                      placeholderTextColor={theme.textMuted}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      editable={!isAuthenticated}
+                      value={bookerEmail}
+                      onChangeText={setBookerEmail}
+                    />
                   </View>
                 </View>
               )}
 
-              {/* 📋 STEP 3: PATIENT INFORMATION */}
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary, marginTop: 14 }]}>
-                2. {t.patientSectionTitle}
-              </Text>
-
-              {/* Patient Full Name */}
-              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>{t.patientNameLabel}</Text>
+              {/* 📋 PATIENT FIELDS */}
               <TextInput
                 style={[styles.inputField, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
-                placeholder={t.patientNamePlaceholder}
+                placeholder="Patient Full Name *"
                 placeholderTextColor={theme.textMuted}
                 value={patientName}
                 onChangeText={setPatientName}
               />
 
-              {/* Patient Phone & Age */}
               <View style={styles.fieldRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>{t.patientPhoneLabel}</Text>
-                  <TextInput
-                    style={[styles.inputField, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
-                    placeholder={t.patientPhonePlaceholder}
-                    placeholderTextColor={theme.textMuted}
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                    value={patientPhone}
-                    onChangeText={setPatientPhone}
-                  />
-                </View>
+                <TextInput
+                  style={[styles.inputField, { flex: 1.5, backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                  placeholder="Patient 10-Digit Mobile *"
+                  placeholderTextColor={theme.textMuted}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  value={patientPhone}
+                  onChangeText={setPatientPhone}
+                />
 
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>{t.ageLabel}</Text>
-                  <TextInput
-                    style={[styles.inputField, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
-                    placeholder={t.agePlaceholder}
-                    placeholderTextColor={theme.textMuted}
-                    keyboardType="numeric"
-                    maxLength={3}
-                    value={patientAge}
-                    onChangeText={setPatientAge}
-                  />
-                </View>
+                <TextInput
+                  style={[styles.inputField, { flex: 1, backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                  placeholder="Age *"
+                  placeholderTextColor={theme.textMuted}
+                  keyboardType="numeric"
+                  maxLength={3}
+                  value={patientAge}
+                  onChangeText={setPatientAge}
+                />
               </View>
 
               {/* Gender Pills */}
-              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>{t.genderLabel} *</Text>
               <View style={styles.genderRow}>
                 {(['male', 'female', 'other'] as const).map((g) => (
                   <TouchableOpacity
@@ -817,51 +755,75 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                         patientGender === g ? { color: '#ffffff', fontWeight: '800' } : { color: theme.textSecondary },
                       ]}
                     >
-                      {g === 'male' ? t.genderMale : g === 'female' ? t.genderFemale : t.genderOther}
+                      {g === 'male' ? 'Male' : g === 'female' ? 'Female' : 'Other'}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
-              {/* Patient Address */}
-              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>{t.patientAddressLabel}</Text>
+              {/* Address */}
               <TextInput
                 style={[styles.inputField, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
-                placeholder={t.patientAddressPlaceholder}
+                placeholder="Village / Town / City *"
                 placeholderTextColor={theme.textMuted}
                 value={patientAddress}
                 onChangeText={setPatientAddress}
               />
 
-              {/* Medical Problem / Symptoms */}
-              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>{t.problemLabel}</Text>
+              {/* Symptoms */}
               <TextInput
                 style={[
                   styles.inputFieldMultiline,
                   { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary },
                 ]}
-                placeholder={t.problemPlaceholder}
+                placeholder="Medical Symptoms / Reason for Consultation *"
                 placeholderTextColor={theme.textMuted}
                 multiline
-                numberOfLines={3}
+                numberOfLines={2}
                 value={symptoms}
                 onChangeText={setSymptoms}
               />
 
-              {/* 📅 STEP 4: DATE & TIME SLOT */}
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary, marginTop: 14 }]}>
-                3. Preferred Date & Time
-              </Text>
+              {/* Date & Slot */}
+              <View style={styles.fieldRow}>
+                <TouchableOpacity
+                  style={[styles.dateSelector, { flex: 1, backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Ionicons name="calendar-outline" size={14} color={theme.primary} style={{ marginRight: 6 }} />
+                  <Text style={[styles.dateText, { color: theme.textPrimary }]}>{appointmentDate}</Text>
+                </TouchableOpacity>
 
-              {/* Appointment Date Picker Trigger */}
-              <TouchableOpacity
-                style={[styles.dateSelector, { backgroundColor: theme.surfaceElevated, borderColor: theme.border }]}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Ionicons name="calendar-outline" size={18} color={theme.primary} style={{ marginRight: 8 }} />
-                <Text style={[styles.dateText, { color: theme.textPrimary }]}>Date: {appointmentDate}</Text>
-                <Ionicons name="chevron-down" size={16} color={theme.textMuted} style={{ marginLeft: 'auto' }} />
-              </TouchableOpacity>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.slotsRow}>
+                  {TIME_SLOTS.slice(0, 4).map((slot) => {
+                    const isSelected = appointmentSlot === slot;
+                    return (
+                      <TouchableOpacity
+                        key={slot}
+                        style={[
+                          styles.slotChip,
+                          isSelected
+                            ? { backgroundColor: theme.primary, borderColor: theme.gold }
+                            : { backgroundColor: theme.surfaceElevated, borderColor: theme.border },
+                        ]}
+                        onPress={() => {
+                          interactionUtils.playClick();
+                          setAppointmentSlot(slot);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.slotChipText,
+                            isSelected ? { color: '#ffffff', fontWeight: '800' } : { color: theme.textSecondary },
+                          ]}
+                        >
+                          {slot}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
 
               {showDatePicker && (
                 <DateTimePicker
@@ -878,44 +840,8 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                 />
               )}
 
-              {/* Time Slots */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.slotsRow}>
-                {TIME_SLOTS.map((slot) => {
-                  const isSelected = appointmentSlot === slot;
-                  return (
-                    <TouchableOpacity
-                      key={slot}
-                      style={[
-                        styles.slotChip,
-                        isSelected
-                          ? { backgroundColor: theme.primary, borderColor: theme.gold }
-                          : { backgroundColor: theme.surfaceElevated, borderColor: theme.border },
-                      ]}
-                      onPress={() => {
-                        interactionUtils.playClick();
-                        setAppointmentSlot(slot);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.slotChipText,
-                          isSelected ? { color: '#ffffff', fontWeight: '800' } : { color: theme.textSecondary },
-                        ]}
-                      >
-                        {slot}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-
-              {/* 🚨 STEP 5: CONSULTATION URGENCY */}
-              <Text style={[styles.sectionHeading, { color: theme.textPrimary, marginTop: 14 }]}>
-                4. {t.urgencyModalTitle}
-              </Text>
-
+              {/* Urgency Pills (Single Row) */}
               <View style={styles.urgencyRow}>
-                {/* Emergency */}
                 <TouchableOpacity
                   style={[
                     styles.urgencyPill,
@@ -933,7 +859,6 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                   </Text>
                 </TouchableOpacity>
 
-                {/* General */}
                 <TouchableOpacity
                   style={[
                     styles.urgencyPill,
@@ -951,7 +876,6 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                   </Text>
                 </TouchableOpacity>
 
-                {/* Routine */}
                 <TouchableOpacity
                   style={[
                     styles.urgencyPill,
@@ -970,21 +894,30 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
                 </TouchableOpacity>
               </View>
 
-              {/* 🚀 SUBMIT BUTTON */}
-              <TouchableOpacity
-                style={[styles.confirmSubmitBtn, { backgroundColor: theme.goldDark }]}
-                onPress={handleBookingSubmit}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#ffffff" />
-                ) : (
-                  <>
-                    <Ionicons name="paper-plane" size={18} color="#ffffff" style={{ marginRight: 8 }} />
-                    <Text style={styles.confirmSubmitBtnText}>{t.bookButton}</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              {/* Action Buttons: Cancel & Confirm */}
+              <View style={styles.modalActionRow}>
+                <TouchableOpacity
+                  style={[styles.cancelModalBtn, { borderColor: theme.border }]}
+                  onPress={closeDoctorModal}
+                >
+                  <Text style={[styles.cancelModalBtnText, { color: theme.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.confirmSubmitBtn, { flex: 2, backgroundColor: theme.goldDark }]}
+                  onPress={handleBookingSubmit}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <>
+                      <Ionicons name="paper-plane" size={15} color="#ffffff" style={{ marginRight: 6 }} />
+                      <Text style={styles.confirmSubmitBtnText}>Confirm Booking</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -997,272 +930,226 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  // Top Navigation Bar
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingBottom: 10,
-    paddingTop: Platform.OS === 'android' ? 44 : 48,
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+    paddingTop: Platform.OS === 'android' ? 38 : 44,
     borderBottomWidth: 1,
   },
   loginBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
   },
   loginBtnText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
   langSelectorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   langPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
     borderWidth: 1,
   },
   langPillText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
   hospitalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 6,
     borderWidth: 1,
-    gap: 4,
+    gap: 3,
   },
   hospitalBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
   },
   scrollContent: {
-    paddingBottom: 30,
-  },
-  welcomeBanner: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 8,
-  },
-  pageHeading: {
-    fontSize: 19,
-    fontWeight: '800',
-    letterSpacing: 0.2,
-  },
-  pageSubheading: {
-    fontSize: 12,
-    marginTop: 4,
+    paddingBottom: 24,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 14,
-    marginVertical: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
+    marginHorizontal: 10,
+    marginVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
     borderWidth: 1,
+    height: 38,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 12,
   },
   deptFilterRow: {
-    paddingHorizontal: 14,
-    gap: 8,
-    paddingBottom: 8,
+    paddingHorizontal: 10,
+    gap: 6,
+    paddingBottom: 6,
   },
   deptPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
     borderWidth: 1,
   },
   deptPillText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
-  // Any Doctor Card
   anyDoctorCard: {
-    marginHorizontal: 14,
-    marginVertical: 10,
-    padding: 14,
-    borderRadius: 16,
+    marginHorizontal: 10,
+    marginVertical: 6,
+    padding: 10,
+    borderRadius: 12,
     borderWidth: 1.5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
   },
   fastBadge: {
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 1,
-    borderRadius: 6,
+    borderRadius: 4,
     borderWidth: 1,
   },
   fastBadgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
   },
-  // Individual Doctor Card
   card: {
-    marginHorizontal: 14,
-    marginBottom: 12,
-    padding: 14,
-    borderRadius: 16,
+    marginHorizontal: 10,
+    marginBottom: 8,
+    padding: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   cardHeader: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
-  avatarCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  avatarCircleSmall: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    fontSize: 20,
+  avatarTextSmall: {
+    fontSize: 16,
     fontWeight: '800',
   },
   doctorInfo: {
     flex: 1,
   },
   doctorName: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '800',
   },
   badgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
+    gap: 4,
+    marginTop: 2,
   },
   tagBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
     borderWidth: 1,
-    gap: 4,
+    gap: 3,
   },
   tagBadgeText: {
-    fontSize: 10.5,
+    fontSize: 9.5,
     fontWeight: '700',
   },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
     borderWidth: 1,
-    gap: 3,
+    gap: 2,
   },
   ratingText: {
     color: '#92400e',
-    fontSize: 10.5,
+    fontSize: 9.5,
     fontWeight: '800',
   },
   specialty: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 3,
-  },
-  deptText: {
     fontSize: 11,
-    marginTop: 2,
-  },
-  qualifications: {
-    fontSize: 10.5,
+    fontWeight: '600',
     marginTop: 2,
   },
   feeBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
+    gap: 3,
+    marginTop: 3,
   },
   feeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
-  bookBtn: {
+  bookBtnSmall: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginTop: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 2,
+    paddingVertical: 7,
+    borderRadius: 8,
+    marginTop: 8,
   },
   bookBtnText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 11.5,
     fontWeight: '800',
-    letterSpacing: 0.2,
   },
   stateCenter: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 30,
   },
   stateText: {
-    fontSize: 13,
-    marginTop: 10,
-    textAlign: 'center',
+    fontSize: 12,
+    marginTop: 8,
   },
   errorBox: {
-    margin: 16,
-    padding: 18,
-    borderRadius: 14,
+    margin: 10,
+    padding: 12,
+    borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
   },
   errorText: {
-    fontSize: 13,
-    marginVertical: 10,
+    fontSize: 11.5,
+    marginVertical: 6,
     textAlign: 'center',
   },
   retryBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 6,
   },
   retryBtnText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   // Modal Styles
@@ -1272,168 +1159,175 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     borderWidth: 1,
     borderBottomWidth: 0,
-    maxHeight: '92%',
-    padding: 18,
+    maxHeight: '90%',
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 12,
+    paddingBottom: 8,
     borderBottomWidth: 1,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: 14.5,
     fontWeight: '800',
   },
   modalSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: 1,
   },
   closeBtn: {
     padding: 4,
   },
   modalScroll: {
-    paddingVertical: 10,
-  },
-  sectionHeading: {
-    fontSize: 13.5,
-    fontWeight: '800',
-    marginBottom: 8,
+    paddingVertical: 8,
   },
   bookingToggleContainer: {
     flexDirection: 'row',
-    padding: 4,
-    borderRadius: 12,
+    padding: 3,
+    borderRadius: 8,
     borderWidth: 1,
-    marginBottom: 10,
-    gap: 6,
+    marginBottom: 8,
+    gap: 4,
   },
   toggleSegment: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 9,
-    borderRadius: 9,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
   toggleSegmentText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '600',
   },
   bookerCard: {
-    padding: 12,
-    borderRadius: 12,
+    padding: 8,
+    borderRadius: 8,
     borderWidth: 1,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   bookerSectionHeading: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: '800',
   },
   autofillBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   autofillBadgeText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
-  },
-  bookerHint: {
-    fontSize: 11,
-    marginBottom: 8,
-    lineHeight: 15,
-  },
-  inputLabel: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    marginBottom: 4,
-    marginTop: 6,
   },
   inputField: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    marginBottom: 6,
   },
   inputFieldMultiline: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
-    minHeight: 65,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    minHeight: 52,
     textAlignVertical: 'top',
+    marginBottom: 6,
   },
   fieldRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
+    alignItems: 'center',
   },
   genderRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
     marginBottom: 6,
   },
   genderPill: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
   },
   genderPillText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   dateSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   dateText: {
-    fontSize: 13,
+    fontSize: 11.5,
     fontWeight: '700',
   },
   slotsRow: {
-    gap: 8,
+    gap: 5,
     paddingBottom: 6,
   },
   slotChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
     borderWidth: 1,
   },
   slotChipText: {
-    fontSize: 11.5,
+    fontSize: 10.5,
     fontWeight: '600',
   },
   urgencyRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
+    gap: 6,
+    marginVertical: 6,
   },
   urgencyPill: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 9,
-    borderRadius: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1.5,
   },
   urgencyPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  cancelModalBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  cancelModalBtnText: {
     fontSize: 12,
     fontWeight: '700',
   },
@@ -1441,19 +1335,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 14,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 3,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
   confirmSubmitBtnText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 12.5,
     fontWeight: '800',
-    letterSpacing: 0.3,
   },
 });

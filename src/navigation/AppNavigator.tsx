@@ -30,17 +30,21 @@ const Tab = createBottomTabNavigator();
 
 const MainTabs = () => {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const navigation = useNavigation<any>();
+
+  const role = (user?.role || '').toLowerCase();
+  const isStaff = role === 'doctor' || role === 'admin' || role === 'compounder';
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerStyle: { backgroundColor: colors.headerBg },
-        headerTitleStyle: { fontWeight: '800', color: colors.headerText, fontSize: 17 },
+        headerTitleStyle: { fontWeight: '800', color: colors.headerText, fontSize: 16 },
         headerTintColor: colors.headerTint,
         headerShadowVisible: false,
         headerRight: () => (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginRight: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginRight: 14 }}>
             <TouchableOpacity
               onPress={() => {
                 interactionUtils.playNotificationSound();
@@ -49,15 +53,15 @@ const MainTabs = () => {
               style={{ padding: 4, position: 'relative' }}
               accessibilityLabel="Notifications"
             >
-              <Ionicons name="notifications-outline" size={22} color={colors.headerTint} />
+              <Ionicons name="notifications-outline" size={20} color={colors.headerTint} />
               <View
                 style={{
                   position: 'absolute',
                   top: 2,
                   right: 2,
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
+                  width: 7,
+                  height: 7,
+                  borderRadius: 3.5,
                   backgroundColor: '#ef4444',
                 }}
               />
@@ -67,7 +71,7 @@ const MainTabs = () => {
               style={{ padding: 4 }}
               accessibilityLabel="User Profile"
             >
-              <Ionicons name="person-circle-outline" size={26} color={colors.headerTint} />
+              <Ionicons name="person-circle-outline" size={24} color={colors.headerTint} />
             </TouchableOpacity>
           </View>
         ),
@@ -77,12 +81,12 @@ const MainTabs = () => {
           backgroundColor: colors.tabBarBg,
           borderTopColor: colors.tabBarBorder,
           borderTopWidth: 1,
-          paddingBottom: 6,
-          paddingTop: 6,
-          height: 62,
+          paddingBottom: 4,
+          paddingTop: 4,
+          height: 56,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '700',
         },
         tabBarIcon: ({ focused, color }) => {
@@ -91,8 +95,9 @@ const MainTabs = () => {
           else if (route.name === 'Appointments') iconName = focused ? 'calendar' : 'calendar-outline';
           else if (route.name === 'Referrals') iconName = focused ? 'git-network' : 'git-network-outline';
           else if (route.name === 'Prescriptions') iconName = focused ? 'medkit' : 'medkit-outline';
+          else if (route.name === 'Invoices') iconName = focused ? 'receipt' : 'receipt-outline';
           else if (route.name === 'Menu') iconName = focused ? 'menu' : 'menu-outline';
-          return <Ionicons name={iconName} size={22} color={color} />;
+          return <Ionicons name={iconName} size={20} color={color} />;
         },
       })}
     >
@@ -106,11 +111,19 @@ const MainTabs = () => {
         component={AppointmentsScreen}
         options={{ title: 'Appointments' }}
       />
-      <Tab.Screen
-        name="Referrals"
-        component={ReferralsScreen}
-        options={{ title: 'Referrals' }}
-      />
+      {isStaff ? (
+        <Tab.Screen
+          name="Invoices"
+          component={InvoicesScreen}
+          options={{ title: 'Billing' }}
+        />
+      ) : (
+        <Tab.Screen
+          name="Referrals"
+          component={ReferralsScreen}
+          options={{ title: 'Referrals' }}
+        />
+      )}
       <Tab.Screen
         name="Prescriptions"
         component={PrescriptionsScreen}

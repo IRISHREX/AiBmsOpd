@@ -48,7 +48,7 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
     setIsSubmitting(true);
     try {
       await login(email.trim(), password, role);
-      interactionUtils.playSuccess();
+      interactionUtils.playLoginSuccess();
       resetToMain();
     } catch (err: any) {
       const msg =
@@ -65,7 +65,7 @@ export const LoginScreen: React.FC<{ navigation?: any }> = ({ navigation }) => {
             await login(email.trim(), password, alt);
             setRole(alt);
             recovered = true;
-            interactionUtils.playSuccess();
+            interactionUtils.playLoginSuccess();
             resetToMain();
             break;
           } catch (altErr) {
