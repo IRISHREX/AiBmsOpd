@@ -339,7 +339,7 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
         </TouchableOpacity>
 
         {/* Center: Language Pills */}
-        <View style={styles.langSelectorRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.langSelectorRow} style={{ marginHorizontal: 6 }}>
           {(['en', 'bn', 'hi', 'ur'] as ReferralLanguage[]).map((l) => (
             <TouchableOpacity
               key={l}
@@ -364,7 +364,7 @@ export const PublicBookingScreen: React.FC<{ navigation: any }> = ({ navigation 
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
         {/* Right: Hospital Badge */}
         <View style={[styles.hospitalBadge, { backgroundColor: theme.goldSoft, borderColor: theme.goldBorder }]}>
@@ -1164,6 +1164,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderBottomWidth: 0,
     maxHeight: '90%',
+    flexShrink: 1,
     paddingHorizontal: 14,
     paddingTop: 12,
     paddingBottom: 16,

@@ -72,6 +72,7 @@ export const AppointmentsScreen: React.FC = () => {
   // Derive unique past patient list for autocomplete
   const previousPatients = React.useMemo(() => {
     const map = new Map<string, {
+      patientId?: string;
       name: string;
       phone: string;
       age: string;
@@ -84,6 +85,7 @@ export const AppointmentsScreen: React.FC = () => {
       const pName = (appt.name || appt.patientName || '').trim();
       if (pName && !map.has(pName.toLowerCase())) {
         map.set(pName.toLowerCase(), {
+          patientId: appt.patientId || undefined,
           name: pName,
           phone: appt.phone || appt.patientPhone || '',
           age: appt.age?.toString() || appt.patientAge?.toString() || '',
@@ -438,9 +440,20 @@ export const AppointmentsScreen: React.FC = () => {
       const calculatedNic = makeNIC(cleanPhone, newPatientAge);
       const calculatedDob = ageToDob(newPatientAge);
 
+      const trimmedName = newPatientName.trim();
+      const nameParts = trimmedName.split(' ');
+      const firstName = nameParts[0] || 'Unknown';
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Not Confirmed';
+
+      const existingPatient = previousPatients.find(p => p.name.toLowerCase() === trimmedName.toLowerCase() && p.phone === cleanPhone);
+      const patientId = existingPatient ? existingPatient.patientId : undefined;
+
       const created = await appointmentsApi.create({
-        patientName: newPatientName.trim(),
-        name: newPatientName.trim(),
+        firstName,
+        lastName,
+        patientId,
+        patientName: trimmedName,
+        name: trimmedName,
         patientPhone: cleanPhone,
         phone: cleanPhone,
         patientAge: newPatientAge ? parseInt(newPatientAge, 10) : undefined,

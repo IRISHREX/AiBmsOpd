@@ -2,8 +2,11 @@ import apiClient from './client';
 import { Appointment } from '../types';
 
 export interface CreateAppointmentPayload {
+  firstName?: string;
+  lastName?: string;
   name?: string;
   patientName?: string;
+  patientId?: string;
   phone?: string;
   patientPhone?: string;
   age?: number;

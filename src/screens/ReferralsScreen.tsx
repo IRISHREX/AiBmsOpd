@@ -67,6 +67,10 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
   const [diagnosis, setDiagnosis] = useState('');
   const [clinicalNotes, setClinicalNotes] = useState('');
   const [urgency, setUrgency] = useState<'routine' | 'urgent' | 'emergency'>('routine');
+  const [targetHospitalName, setTargetHospitalName] = useState('');
+  const [targetDoctorName, setTargetDoctorName] = useState('');
+  const [department, setDepartment] = useState('');
+  const [commissionPercent, setCommissionPercent] = useState('');
 
   const fetchReferrals = useCallback(async () => {
     try {
@@ -154,6 +158,11 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
         diagnosis: diagnosis.trim(),
         clinicalNotes: clinicalNotes.trim(),
         urgency,
+        targetHospitalName: targetHospitalName.trim(),
+        targetDoctorName: targetDoctorName.trim(),
+        department: department.trim(),
+        commissionPercent: commissionPercent ? parseFloat(commissionPercent) : undefined,
+        referralType: 'doctor_referral',
       });
       interactionUtils.playSuccess();
       Alert.alert('Success', 'Patient referral created successfully');
@@ -163,6 +172,10 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
       setDiagnosis('');
       setClinicalNotes('');
       setUrgency('routine');
+      setTargetHospitalName('');
+      setTargetDoctorName('');
+      setDepartment('');
+      setCommissionPercent('');
       
       fetchReferrals();
     } catch (e: any) {
@@ -606,6 +619,33 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
                 onChangeText={setPatientName}
               />
 
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Target Hospital Name</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                placeholder="Hospital/Clinic Name"
+                placeholderTextColor={theme.textMuted}
+                value={targetHospitalName}
+                onChangeText={setTargetHospitalName}
+              />
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Target Doctor / Department</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  style={[styles.input, { flex: 1, backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                  placeholder="Doctor Name"
+                  placeholderTextColor={theme.textMuted}
+                  value={targetDoctorName}
+                  onChangeText={setTargetDoctorName}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1, backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                  placeholder="Department"
+                  placeholderTextColor={theme.textMuted}
+                  value={department}
+                  onChangeText={setDepartment}
+                />
+              </View>
+
               <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Provisional Diagnosis *</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
@@ -613,6 +653,16 @@ export const ReferralsScreen: React.FC<{ navigation: any }> = ({ navigation }) =
                 placeholderTextColor={theme.textMuted}
                 value={diagnosis}
                 onChangeText={setDiagnosis}
+              />
+
+              <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Expected Commission %</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.surfaceElevated, borderColor: theme.border, color: theme.textPrimary }]}
+                placeholder="e.g. 10"
+                placeholderTextColor={theme.textMuted}
+                keyboardType="numeric"
+                value={commissionPercent}
+                onChangeText={setCommissionPercent}
               />
 
               <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Urgency Level</Text>

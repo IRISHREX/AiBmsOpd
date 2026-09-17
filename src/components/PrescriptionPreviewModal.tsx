@@ -11,6 +11,7 @@ import {
   Platform,
   Share,
   BackHandler,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
@@ -134,7 +135,8 @@ export const PrescriptionPreviewModal: React.FC<Props> = ({
 
   const handleShareWebLink = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const pId = appointment.patientId || appointment._id;
+    const rawPatientId = appointment.patientId || appointment._id;
+    const pId = typeof rawPatientId === 'object' ? (rawPatientId as any)._id : rawPatientId;
     const webUrl = `https://novel.mkinfotrack.com/preview/${pId}`;
     try {
       await Share.share({
@@ -197,27 +199,32 @@ export const PrescriptionPreviewModal: React.FC<Props> = ({
               {/* Header Letterhead Preview */}
               {currentSettings.printWithHeader && (
                 <View style={[styles.headerSection, { borderBottomColor: colors.primary }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.clinicTitle, { color: colors.primary }]}>
-                      {currentSettings.clinicName || 'BMS MEDICAL OPD CLINIC'}
-                    </Text>
-                    <Text style={[styles.clinicSub, { color: colors.textSecondary }]}>
-                      {currentSettings.clinicSubtitle || 'Advanced Medical Care & Diagnostics'}
-                    </Text>
-                    {currentSettings.clinicContact && (
-                      <Text style={[styles.clinicContact, { color: colors.textMuted }]}>
-                        {currentSettings.clinicContact}
+                  {currentSettings.headerImageUrl ? (
+                    <Image source={{ uri: currentSettings.headerImageUrl }} style={{ width: '100%', height: 70, resizeMode: 'contain', marginBottom: 8 }} />
+                  ) : null}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.clinicTitle, { color: colors.primary }]}>
+                        {currentSettings.clinicName || 'BMS MEDICAL OPD CLINIC'}
                       </Text>
-                    )}
-                  </View>
-                  <View style={styles.doctorBlock}>
-                    <Text style={[styles.drName, { color: colors.textPrimary }]}>{doctorName}</Text>
-                    <Text style={[styles.drQual, { color: colors.goldDark }]}>
-                      {doctorSpecialization || currentSettings.doctorDegree || 'Physician'}
-                    </Text>
-                    {currentSettings.doctorRegNo && (
-                      <Text style={[styles.drReg, { color: colors.textMuted }]}>{currentSettings.doctorRegNo}</Text>
-                    )}
+                      <Text style={[styles.clinicSub, { color: colors.textSecondary }]}>
+                        {currentSettings.clinicSubtitle || 'Advanced Medical Care & Diagnostics'}
+                      </Text>
+                      {currentSettings.clinicContact && (
+                        <Text style={[styles.clinicContact, { color: colors.textMuted }]}>
+                          {currentSettings.clinicContact}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.doctorBlock}>
+                      <Text style={[styles.drName, { color: colors.textPrimary }]}>{doctorName}</Text>
+                      <Text style={[styles.drQual, { color: colors.goldDark }]}>
+                        {doctorSpecialization || currentSettings.doctorDegree || 'Physician'}
+                      </Text>
+                      {currentSettings.doctorRegNo && (
+                        <Text style={[styles.drReg, { color: colors.textMuted }]}>{currentSettings.doctorRegNo}</Text>
+                      )}
+                    </View>
                   </View>
                 </View>
               )}
@@ -337,6 +344,9 @@ export const PrescriptionPreviewModal: React.FC<Props> = ({
                   </Text>
                 </View>
                 <View style={styles.signatureArea}>
+                  {currentSettings.signImageUrl ? (
+                    <Image source={{ uri: currentSettings.signImageUrl }} style={{ width: 120, height: 50, resizeMode: 'contain', marginBottom: 4 }} />
+                  ) : null}
                   <View style={[styles.signPlaceholder, { borderColor: colors.textMuted }]}>
                     <Text style={[styles.signTitle, { color: colors.textPrimary }]}>{doctorName}</Text>
                     <Text style={[styles.signSub, { color: colors.textMuted }]}>Authorized Medical Officer</Text>
@@ -445,7 +455,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   headerSection: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     justifyContent: 'space-between',
     paddingBottom: 12,
     borderBottomWidth: 2,

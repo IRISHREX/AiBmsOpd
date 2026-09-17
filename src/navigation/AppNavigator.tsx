@@ -111,19 +111,11 @@ const MainTabs = () => {
         component={AppointmentsScreen}
         options={{ title: 'Appointments' }}
       />
-      {isStaff ? (
-        <Tab.Screen
-          name="Invoices"
-          component={InvoicesScreen}
-          options={{ title: 'Billing' }}
-        />
-      ) : (
-        <Tab.Screen
-          name="Referrals"
-          component={ReferralsScreen}
-          options={{ title: 'Referrals' }}
-        />
-      )}
+      <Tab.Screen
+        name="Referrals"
+        component={ReferralsScreen}
+        options={{ title: 'Referrals' }}
+      />
       <Tab.Screen
         name="Prescriptions"
         component={PrescriptionsScreen}

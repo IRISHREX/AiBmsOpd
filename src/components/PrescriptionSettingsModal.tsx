@@ -48,9 +48,14 @@ export const PrescriptionSettingsModal: React.FC<Props> = ({ visible, onClose })
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 0.8,
+        base64: true,
       });
 
-      if (!result.canceled && result.assets && result.assets[0]?.uri) {
+      if (!result.canceled && result.assets && result.assets[0]?.base64) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        const dataUri = `data:${result.assets[0].mimeType || 'image/jpeg'};base64,${result.assets[0].base64}`;
+        setSettings((prev) => (prev ? { ...prev, [field]: dataUri } : null));
+      } else if (!result.canceled && result.assets && result.assets[0]?.uri) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setSettings((prev) => (prev ? { ...prev, [field]: result.assets[0].uri } : null));
       }
