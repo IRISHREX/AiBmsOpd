@@ -21,6 +21,7 @@ export interface User {
   doctorInfo?: Doctor;
   compounders?: string[] | User[];
   assignedDoctors?: string[] | User[];
+  prescriptionTemplate?: string;
   createdAt?: string;
 }
 

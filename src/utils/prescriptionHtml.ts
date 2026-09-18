@@ -292,44 +292,101 @@ export const generatePrescriptionHtml = ({
       <div class="p-item"><span class="p-label">Address:</span> <span class="p-val">${address}</span></div>
     </div>
 
-    <!-- Vitals -->
-    ${vitalsList ? `
-      <div class="vitals-strip">
-        <strong>Vitals:</strong> ${vitalsList}
-      </div>
-    ` : ''}
+    <!-- Body Content Layout based on Template -->
+    ${(() => {
+      // @ts-ignore
+      const template = appointment.doctor?.prescriptionTemplate || appointment.doctorInfo?.prescriptionTemplate || 'default';
+      
+      const vitalsBlock = vitalsList ? `
+        <div class="vitals-strip" style="background: transparent; border: none; padding: 0; margin-bottom: 12px; color: #0f172a;">
+          <h4 style="margin: 0 0 6px 0; font-size: 12px; color: #1e40af; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">VITALS</h4>
+          ${Object.entries(vitals).filter(([_, val]) => val && val.trim() !== '').map(([key, val]) => `<div style="margin-bottom: 4px;"><strong>${key}:</strong> ${val}</div>`).join('')}
+        </div>
+      ` : '';
 
-    <!-- Clinical Findings -->
-    ${findingsList ? `
-      <div class="clinical-strip">
-        <strong>Clinical Findings / Provisional Diagnosis:</strong> ${findingsList}
-      </div>
-    ` : ''}
+      const findingsBlock = findingsList ? `
+        <div class="clinical-strip" style="background: transparent; border: none; padding: 0; margin-bottom: 12px; color: #0f172a;">
+          <h4 style="margin: 0 0 6px 0; font-size: 12px; color: #1e40af; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">INVESTIGATIONS</h4>
+          ${Object.entries(clinicalFindings).filter(([_, val]) => val && typeof val === 'string' && val.trim() !== '').map(([key, val]) => `<div style="margin-bottom: 4px;">${val}</div>`).join('')}
+        </div>
+        <div class="clinical-strip" style="background: transparent; border: none; padding: 0; margin-bottom: 12px; color: #0f172a;">
+          <h4 style="margin: 0 0 6px 0; font-size: 12px; color: #1e40af; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">PROVISIONAL DIAGNOSIS</h4>
+          ${Object.entries(clinicalFindings).filter(([_, val]) => val && typeof val === 'object').map(([key, val]) => `<div style="margin-bottom: 4px;">${JSON.stringify(val)}</div>`).join('')}
+        </div>
+      ` : '';
 
-    <!-- Medicines Table -->
-    <div class="rx-header">℞ Medicine Advice</div>
-    <table class="rx-table">
-      <thead>
-        <tr>
-          <th style="width: 35%;">Medicine</th>
-          <th style="width: 15%;">Dosage</th>
-          <th style="width: 20%;">Frequency</th>
-          <th style="width: 15%;">Duration</th>
-          <th style="width: 15%;">Instructions</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${medicinesRows}
-      </tbody>
-    </table>
+      const rxBlock = `
+        <!-- Medicines Table -->
+        <div class="rx-header">℞ Medicine Advice</div>
+        <table class="rx-table">
+          <thead>
+            <tr>
+              <th style="width: 35%;">Medicine</th>
+              <th style="width: 15%;">Dosage</th>
+              <th style="width: 20%;">Frequency</th>
+              <th style="width: 15%;">Duration</th>
+              <th style="width: 15%;">Instructions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${medicinesRows}
+          </tbody>
+        </table>
+        
+        <!-- Advice & Diet -->
+        ${(advice || diet) ? `
+          <div class="advice-box">
+            ${advice ? `<div><span class="advice-title">General Advice:</span> ${advice}</div>` : ''}
+            ${diet ? `<div style="margin-top: 4px;"><span class="advice-title">Dietary Guidance:</span> ${diet}</div>` : ''}
+          </div>
+        ` : ''}
+      `;
 
-    <!-- Advice & Diet -->
-    ${(advice || diet) ? `
-      <div class="advice-box">
-        ${advice ? `<div><span class="advice-title">General Advice:</span> ${advice}</div>` : ''}
-        ${diet ? `<div style="margin-top: 4px;"><span class="advice-title">Dietary Guidance:</span> ${diet}</div>` : ''}
-      </div>
-    ` : ''}
+      if (template === 'Template 1: Right-side margin layout') {
+        return `
+          <div style="display: flex; gap: 20px;">
+            <div style="flex: 1;">
+              ${rxBlock}
+            </div>
+            <div style="width: 200px; border-left: 1px solid #e2e8f0; padding-left: 12px;">
+              ${vitalsBlock}
+              ${findingsBlock}
+            </div>
+          </div>
+        `;
+      } else if (template === 'Template 2: Left-side margin layout') {
+        return `
+          <div style="display: flex; gap: 20px;">
+            <div style="width: 200px; border-right: 1px solid #e2e8f0; padding-right: 12px;">
+              ${vitalsBlock}
+              ${findingsBlock}
+            </div>
+            <div style="flex: 1;">
+              ${rxBlock}
+            </div>
+          </div>
+        `;
+      } else {
+        // Default Layout
+        return `
+          <!-- Vitals -->
+          ${vitalsList ? `
+            <div class="vitals-strip">
+              <strong>Vitals:</strong> ${vitalsList}
+            </div>
+          ` : ''}
+      
+          <!-- Clinical Findings -->
+          ${findingsList ? `
+            <div class="clinical-strip">
+              <strong>Clinical Findings / Provisional Diagnosis:</strong> ${findingsList}
+            </div>
+          ` : ''}
+          
+          ${rxBlock}
+        `;
+      }
+    })()}
 
     <!-- Footer with Seal & Sign -->
     <div class="footer-section">
