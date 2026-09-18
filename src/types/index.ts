@@ -131,7 +131,7 @@ export interface Appointment {
   followup_date?: string;
   slotTime?: string;
   status: 'Pending' | 'Completed' | 'Cancelled' | 'Rescheduled' | 'Accepted' | 'Rejected';
-  paymentStatus?: 'Pending' | 'Accepted' | 'Due' | 'Paid';
+  paymentStatus?: 'Pending' | 'Accepted' | 'Due' | 'Paid' | 'Refund';
   price?: number;
   hasVisited?: boolean;
   symptoms?: string[];
@@ -158,6 +158,7 @@ export interface Medicine {
   manufacturer?: string;
   stock?: number;
   unitPrice?: number;
+  expiryDate?: string;
 }
 
 export interface PrescriptionItem {
@@ -169,13 +170,20 @@ export interface PrescriptionItem {
   instructions?: string;
 }
 
+export interface InvoiceItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
 export interface Invoice {
   _id: string;
   invoiceNumber?: string;
-  appointment?: any;
-  patient?: any;
-  doctor?: any;
-  items?: { description: string; quantity: number; unitPrice: number; total: number }[];
+  patient?: { _id: string; name?: string; firstName?: string; lastName?: string; phone?: string; email?: string };
+  doctor?: { _id: string; name?: string; firstName?: string; lastName?: string; doctorDepartment?: string };
+  appointment?: { _id: string; name?: string; patientName?: string; appointment_date?: string; appointmentDate?: string; doctor?: any; department?: string; price?: number };
+  items: InvoiceItem[];
   subtotal?: number;
   tax?: number;
   discount?: number;
@@ -192,14 +200,44 @@ export interface Invoice {
 
 export interface Report {
   _id: string;
-  title: string;
-  category: string;
-  patientId?: string;
-  appointmentId?: string;
-  date: string;
+  appointmentId?: any;
+  doctorId?: any;
+  patientId?: any;
+  appointmentDate?: string;
+  amount: number;
+  paid: number;
+  due: number;
+  revenue?: number;
+  status: 'Due' | 'Paid' | 'Partial' | 'Adjusted' | 'Refund' | string;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  title?: string;
+  category?: string;
+  date?: string;
   summary?: string;
   totalRevenue?: number;
   totalAppointments?: number;
+}
+
+export interface SystemLog {
+  _id: string;
+  level: 'INFO' | 'WARN' | 'ERROR' | 'SUCCESS';
+  category: string;
+  action: string;
+  message: string;
+  userName?: string;
+  userRole?: string;
+  ipAddress?: string;
+  metadata?: Record<string, any>;
+  createdAt: string;
+}
+
+export interface LogSettings {
+  maxCapacity: number;
+  alertThresholdDays: number;
+  alertThresholdPercent: number;
+  lastDownloadedDate?: string;
 }
 
 export interface Message {

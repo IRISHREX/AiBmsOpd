@@ -11,6 +11,8 @@ import {
   LayoutAnimation,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 import { invoicesApi } from '../api/invoices';
 import { Invoice } from '../types';
 import { colors } from '../theme/colors';
@@ -218,6 +220,101 @@ export const InvoicesScreen: React.FC = () => {
         },
       },
     ]);
+  };
+
+  const handlePrintInvoiceReceipt = async (item: Invoice) => {
+    interactionUtils.playClick();
+    const patientName = getPatientName(item);
+    const doctorName = getDoctorName(item);
+    const invoiceNo = item.invoiceNumber || `INV-${String(item._id).slice(-6).toUpperCase()}`;
+    const total = getInvoiceTotal(item);
+    const paid = getPaidAmount(item);
+    const balance = Math.max(0, total - paid);
+    const dateStr = item.issuedAt ? new Date(item.issuedAt).toLocaleDateString('en-GB') : (item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'));
+    const isPaid = item.status === 'Paid' || balance <= 0;
+
+    const itemsHtml = Array.isArray(item.items) && item.items.length > 0
+      ? item.items.map(it => `
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #f1f5f9;">${it.description || 'Consultation / Service'}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: center;">${it.quantity || 1}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: right;">₹${it.unitPrice || 0}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #f1f5f9; text-align: right; font-weight: bold;">₹${it.total || ((it.quantity || 1) * (it.unitPrice || 0))}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="4" style="padding: 8px; text-align: center; color: #64748b;">Consultation Service - ₹${total}</td></tr>`;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Invoice - ${invoiceNo}</title>
+          <style>
+            body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 25px; color: #1e293b; background: #fff; line-height: 1.4; }
+            .receipt-box { border: 2px solid #e2e8f0; border-radius: 12px; padding: 24px; max-width: 500px; margin: 0 auto; }
+            .header { text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 14px; margin-bottom: 18px; }
+            .title { font-size: 18px; font-weight: 800; color: #096dd9; margin: 0; }
+            .sub { font-size: 12px; color: #64748b; margin-top: 3px; font-weight: 600; }
+            .info-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+            .label { color: #64748b; font-weight: 500; }
+            .val { font-weight: 700; color: #0f172a; }
+            table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+            th { background: #f8fafc; padding: 8px; border-bottom: 2px solid #e2e8f0; text-align: left; font-size: 11px; text-transform: uppercase; color: #475569; }
+            .amount-summary { margin-top: 14px; border-top: 2px solid #e2e8f0; padding-top: 10px; }
+            .total-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
+            .grand-total { font-size: 16px; font-weight: 800; color: #059669; }
+            .footer { text-align: center; font-size: 11px; color: #94a3b8; margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="receipt-box">
+            <div class="header">
+              <h1 class="title">NOVEL HEALTHCARE CLINIC & HOSPITAL</h1>
+              <div class="sub">Official Invoice / Payment Receipt</div>
+            </div>
+            <div class="info-row"><span class="label">Invoice No:</span><span class="val">${invoiceNo}</span></div>
+            <div class="info-row"><span class="label">Date:</span><span class="val">${dateStr}</span></div>
+            <div class="info-row"><span class="label">Patient Name:</span><span class="val">${patientName}</span></div>
+            <div class="info-row"><span class="label">Consulting Doctor:</span><span class="val">${doctorName}</span></div>
+            <div class="info-row"><span class="label">Status:</span><span class="val" style="color: ${isPaid ? '#059669' : '#d97706'}">${isPaid ? 'PAID' : 'PENDING'}</span></div>
+            
+            <table>
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th style="text-align: center;">Qty</th>
+                  <th style="text-align: right;">Rate</th>
+                  <th style="text-align: right;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${itemsHtml}
+              </tbody>
+            </table>
+
+            <div class="amount-summary">
+              <div class="total-row"><span class="label">Total Amount:</span><span class="val">₹${total.toLocaleString()}</span></div>
+              <div class="total-row"><span class="label">Paid Amount:</span><span class="val" style="color: #059669;">₹${paid.toLocaleString()}</span></div>
+              <div class="total-row grand-total"><span>Balance Due:</span><span>₹${balance.toLocaleString()}</span></div>
+            </div>
+
+            <div class="footer">Thank you for visiting Novel Healthcare. Computer-generated invoice.</div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      } else {
+        await Print.printAsync({ uri });
+      }
+    } catch (err: any) {
+      Alert.alert('Notice', err.message || 'Failed to print/share invoice');
+    }
   };
 
   return (
@@ -437,6 +534,14 @@ export const InvoicesScreen: React.FC = () => {
 
                 {/* Card Action Buttons */}
                 <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    style={styles.btnReceipt}
+                    onPress={() => handlePrintInvoiceReceipt(item)}
+                  >
+                    <Ionicons name="receipt-outline" size={14} color="#059669" style={{ marginRight: 4 }} />
+                    <Text style={styles.btnReceiptText}>Receipt</Text>
+                  </TouchableOpacity>
+
                   {!isPaid && (
                     <TouchableOpacity
                       style={styles.btnSettle}
@@ -774,6 +879,22 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: 8,
     alignItems: 'center',
+  },
+  btnReceipt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+  },
+  btnReceiptText: {
+    color: '#059669',
+    fontSize: 12,
+    fontWeight: '700',
   },
   btnSettle: {
     flexDirection: 'row',

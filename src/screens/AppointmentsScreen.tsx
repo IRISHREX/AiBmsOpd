@@ -695,7 +695,12 @@ export const AppointmentsScreen: React.FC = () => {
               {/* Action Buttons */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 10 }}>
                 <View style={{ flex: 1 }}>
-                  {item.status === 'Completed' && (item.paymentStatus === 'Paid' || item.paymentStatus === 'Accepted') ? (
+                  {item.paymentStatus === 'Refund' ? (
+                    <View style={[styles.paidBadgeBox, { backgroundColor: '#ffe4e6', borderColor: '#fecdd3' }]}>
+                      <Ionicons name="arrow-undo-circle" size={16} color="#be123c" />
+                      <Text style={[styles.paidBadgeText, { color: '#be123c' }]}>Refunded</Text>
+                    </View>
+                  ) : item.status === 'Completed' && (item.paymentStatus === 'Paid' || item.paymentStatus === 'Accepted') ? (
                     <View style={styles.paidBadgeBox}>
                       <Ionicons name="checkmark-done-circle" size={16} color="#059669" />
                       <Text style={styles.paidBadgeText}>Paid & Settled</Text>
@@ -704,7 +709,7 @@ export const AppointmentsScreen: React.FC = () => {
                     <DropdownPicker 
                       label="Payment" 
                       value={item.paymentStatus || 'Due'} 
-                      options={[{label:'Paid', value:'Paid'}, {label:'Due', value:'Due'}]} 
+                      options={[{ label: 'Paid', value: 'Paid' }, { label: 'Due', value: 'Due' }, { label: 'Refund', value: 'Refund' }]} 
                       onSelect={(v) => handlePaymentStatusChange(item._id, v)} 
                     />
                   )}
@@ -1310,17 +1315,26 @@ export const AppointmentsScreen: React.FC = () => {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.modalLabel}>Payment Status</Text>
                       <View style={{ flexDirection: 'row', gap: 6 }}>
-                        {['Due', 'Paid'].map((p) => (
+                        {['Due', 'Paid', 'Refund'].map((p) => (
                           <TouchableOpacity
                             key={p}
                             style={[
                               styles.doctorChip,
                               { flex: 1, alignItems: 'center' },
-                              editPaymentStatus === p && { backgroundColor: p === 'Paid' ? '#ecfdf5' : '#fef2f2', borderColor: p === 'Paid' ? '#059669' : '#dc2626' },
+                              editPaymentStatus === p && {
+                                backgroundColor: p === 'Refund' ? '#ffe4e6' : (p === 'Paid' ? '#ecfdf5' : '#fef2f2'),
+                                borderColor: p === 'Refund' ? '#be123c' : (p === 'Paid' ? '#059669' : '#dc2626')
+                              },
                             ]}
                             onPress={() => setEditPaymentStatus(p)}
                           >
-                            <Text style={{ fontSize: 12, fontWeight: '700', color: editPaymentStatus === p ? (p === 'Paid' ? '#059669' : '#dc2626') : '#64748b' }}>
+                            <Text style={{
+                              fontSize: 12,
+                              fontWeight: '700',
+                              color: editPaymentStatus === p 
+                                ? (p === 'Refund' ? '#be123c' : (p === 'Paid' ? '#059669' : '#dc2626')) 
+                                : '#64748b'
+                            }}>
                               {p}
                             </Text>
                           </TouchableOpacity>

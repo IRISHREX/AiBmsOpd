@@ -21,6 +21,7 @@ import { ReportsScreen } from '../screens/ReportsScreen';
 import { MessagesScreen } from '../screens/MessagesScreen';
 import { ReferralsScreen } from '../screens/ReferralsScreen';
 import { PublicBookingScreen } from '../screens/PublicBookingScreen';
+import { SystemLogsScreen } from '../screens/SystemLogsScreen';
 
 import { colors as staticColors } from '../theme/colors';
 import { useTheme } from '../context/ThemeContext';
@@ -213,6 +214,7 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen name="Messages" component={MessagesScreen} options={{ headerShown: true, title: 'Notifications & Messages' }} />
         <Stack.Screen name="Referrals" component={ReferralsScreen} options={{ headerShown: true, title: 'Referrals' }} />
         <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: true, title: 'Profile' }} />
+        <Stack.Screen name="SystemLogs" component={SystemLogsScreen} options={{ headerShown: true, title: 'System Audit Logs' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

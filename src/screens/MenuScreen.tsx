@@ -22,6 +22,9 @@ export const MenuScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     { title: 'Notifications & Messages', icon: 'chatbubbles-outline', color: colors.goldDark, bg: colors.goldSoft, route: 'Messages' },
     { title: 'Referrals & Earnings', icon: 'git-network-outline', color: colors.primaryLight, bg: colors.primarySoft, route: 'Referrals' },
     { title: 'Profile & Settings', icon: 'settings-outline', color: colors.textSecondary, bg: colors.surfaceElevated, route: 'Profile' },
+    ...(user?.role?.toLowerCase() === 'admin'
+      ? [{ title: 'System Audit Logs', icon: 'shield-checkmark-outline', color: colors.gold, bg: colors.goldSoft, route: 'SystemLogs' }]
+      : []),
   ];
 
   return (
