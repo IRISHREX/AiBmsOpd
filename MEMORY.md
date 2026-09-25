@@ -93,3 +93,22 @@
   1. `BMS-opd-be` (`origin/main`): Committed `f56557f` ("feat: add local mongodb failover, aiccloud s3 backup integration").
   2. `BMS-opd-fe` (`origin/Sohel2`): Committed `6ca9d6d` ("chore: point production API to biomechasoft.in and add react-countup").
   3. Root repo `AiBmsOpd` (`origin/main`): Committed `ce08926` updating submodule pointers. All pushed cleanly.
+
+---
+
+### Task 7: S3 Doctor Assets Storage & Image Serving Resolution
+* **Date & Time**: 2026-09-25 07:05 ~ 07:25 IST
+* **Goal**: Fix doctor stamp, avatar (DP), header, and footer images failing to load in frontend and PDF previews.
+* **Root Causes Identified**:
+  1. **Nginx Missing Route**: Nginx on VPS lacked a `location /uploads` directive. Requests for `/uploads/doctors/...` were caught by `location /` and returned `index.html` (text/html) instead of image bytes.
+  2. **Private S3 Bucket**: The aiccloud S3 bucket is private; direct browser requests to `https://s3.aiccloud.online/aic-585105c0/...` return `403 Forbidden AccessDenied`.
+  3. **No S3 Sync for Uploads**: Multer was saving uploaded images strictly to local disk `/uploads/doctors/` without uploading to S3.
+  4. **Missing footerImage Field**: `footerImage` was absent from `userSchema.js`, `upload.js`, and `userController.js`.
+* **Steps Taken**:
+  1. Updated `BMS-opd-be/models/userSchema.js` and `middlewares/upload.js` to add `footerImage`.
+  2. Updated `userController.js` (`addNewDoctor`, `updateUserById`, `updateDoctorProfile`) to asynchronously upload doctor images (`docAvatar`, `stampImage`, `signImage`, `headerImage`, `footerImage`) directly to S3 bucket `aic-585105c0` under `doctors/`.
+  3. Implemented smart S3 fallback endpoint in `app.js` (`GET /uploads/doctors/:filename`): serves from local disk cache, and if missing, streams from S3 bucket and caches locally.
+  4. Updated Nginx config on VPS to proxy `/uploads` to backend (`127.0.0.1:5000`) and restarted Nginx.
+  5. Synced all 20 existing doctor uploads from VPS disk to S3 bucket `aic-585105c0/doctors/`.
+  6. Verified over HTTPS: `https://biomechasoft.in/uploads/doctors/...` now returns `HTTP 200 OK` with `Content-Type: image/jpeg`.
+  7. Committed & pushed backend changes (`e829598`) and root submodule pointer (`d4e4f78`).
