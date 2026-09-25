@@ -137,3 +137,18 @@
   2. Migrated Dr. Tarikul Alam's document in MongoDB on VPS: moved the ThyroGen banner from `signImage` to `footerImage` and set `signImage: null`.
   3. Updated `MyDocument.jsx` and `Preview.jsx`: ensured custom doctor footer replaces `/Footer.png` at the bottom and does not appear in credentials section.
 
+---
+
+### Task 10: General Settings Branding, Location QR Code, Receipt/Prescription Hierarchy & Template Builder Fix
+* **Date & Time**: 2026-09-25 11:00 ~ 11:35 IST
+* **Goal**: Fix HTTP 413 error and TemplateBuilder state mutation error, implement Organization Settings with Location QR code, uploadable Default Header & Footer, and apply branding hierarchy across Prescriptions and Receipts.
+* **Steps Taken**:
+  1. **Fixed HTTP 413 on VPS**: Added `client_max_body_size 50M;` to Nginx config and reloaded. Updated prescription saving flow to store structured JSON data in MongoDB with rolling 3-version retention, generating PDFs client-side on demand for fast, lightweight storage.
+  2. **Fixed TemplateBuilder Error**: Resolved `TypeError: Cannot assign to read only property 'prescriptionTemplate'` by updating React context state immutably (`setAdmin(prev => ({ ...prev, prescriptionTemplate: tmpl.name }))`).
+  3. **Backend General Settings API**: Created `generalSettingsSchema.js`, `generalSettingsController.js`, and `generalSettingsRouter.js` mounted at `/api/v1/settings/general` with multer upload middleware (`uploadClinicImagesDisk`) and S3 background sync.
+  4. **Frontend Organization & Branding UI**: Added `OrganizationSettings.jsx` inside `ThemeSettings.jsx` providing editable clinic details (Org Name, Reg No, Address, Owner, Platform Fee, Google Location URL), live Location QR code generator (`qrcode`), and image uploaders for Default Header & Footer.
+  5. **Prescription Branding Hierarchy**: Updated `Preview.jsx` and PDF templates to use `doctor.headerImage || generalSettings.defaultHeaderImage` and `doctor.footerImage || generalSettings.defaultFooterImage`.
+  6. **Receipt / Invoice Branding**: Updated OPD receipts in `Appointment.jsx` and `ReportsPage.jsx` using `generalSettingsUtil.js` to render the Default Header, Organization details, Platform Fee, Google Location QR code, and Default Footer.
+  7. **Redeployment & Git Push**: Built frontend, deployed backend and frontend to aiccloud VPS (`https://biomechasoft.in`), verified live API response, and pushed all commits to GitHub.
+
+
