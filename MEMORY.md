@@ -112,3 +112,28 @@
   5. Synced all 20 existing doctor uploads from VPS disk to S3 bucket `aic-585105c0/doctors/`.
   6. Verified over HTTPS: `https://biomechasoft.in/uploads/doctors/...` now returns `HTTP 200 OK` with `Content-Type: image/jpeg`.
   7. Committed & pushed backend changes (`e829598`) and root submodule pointer (`d4e4f78`).
+
+---
+
+### Task 8: Prescription PDF Storage (S3, 3-Version Rolling Retention) & Multi-View Downloads
+* **Date & Time**: 2026-09-25 09:30 ~ 10:15 IST
+* **Goal**: Enable direct PDF generation and saving to S3 disk storage, retaining up to 3 prescriptions per patient (same-day overwrites, >3 oldest purged). Add date-selection download modal across Dashboard, Reports, and Messages.
+* **Steps Taken**:
+  1. Updated `prescriptionSchema.js` with `pdfFiles` array (`date`, `s3Key`, `s3Url`, `savedAt`).
+  2. Implemented S3 helpers in `s3Storage.js` (`uploadPrescriptionPdfToS3`, `deleteS3Object`, `getPresignedDownloadUrl`). Installed `@aws-sdk/s3-request-presigner`.
+  3. Added backend routes in `prescriptionRouter.js` and controller functions in `prescriptionController.js` (`savePrescriptionPdf`, `listPrescriptionPdfs`).
+  4. Added `handleSavePdf` and "💾 Save PDF" button in `Preview.jsx`.
+  5. Created `DownloadPrescriptionModal.jsx` and `DownloadPrescriptionModal.css` for date-selection downloads via presigned URLs.
+  6. Added PDF download triggers in `Dashboard.jsx`, `ReportsPage.jsx`, and `Messages.jsx` (via `MessageCard.jsx` / `MessageList.jsx`).
+
+---
+
+### Task 9: Doctor Footer Placement & Form Field Tweak
+* **Date & Time**: 2026-09-25 10:20 ~ 10:35 IST
+* **Goal**: Fix doctor's footer image rendering in place of signature/stamp while default blue footer was still appearing at bottom.
+* **Root Cause**: `AddNewDoctor.jsx` mislabeled the `signImage` input as "Footer Image (optional)" and lacked a `footerImage` input, storing the footer banner in `signImage`.
+* **Steps Taken**:
+  1. Updated `AddNewDoctor.jsx`: separated inputs into "Signature Image (optional)" and "Footer Image (optional)" with full preview and submit support.
+  2. Migrated Dr. Tarikul Alam's document in MongoDB on VPS: moved the ThyroGen banner from `signImage` to `footerImage` and set `signImage: null`.
+  3. Updated `MyDocument.jsx` and `Preview.jsx`: ensured custom doctor footer replaces `/Footer.png` at the bottom and does not appear in credentials section.
+
