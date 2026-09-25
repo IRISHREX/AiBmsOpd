@@ -29,6 +29,20 @@ Whenever working with the aiccloud production VPS:
 * **Automated Daily Backup**: Runs via cron at `02:00 AM UTC` (`/root/backup-to-s3.sh`) dumping compressed MongoDB archive and Appointments/Patients/Medicines CSV files directly into the S3 bucket.
 
 ### 2. How to Deploy to aiccloud VPS
+#### Dynamic Deployment CLI (Recommended):
+From `c:\PROJECTS\AiBmsOpd\aiccloud-deployment`:
+```bash
+npm run setup       # Configure local paths (LOCAL_PROJECT_ROOT, LOCAL_BACKEND_PATH, LOCAL_FRONTEND_PATH)
+npm run add be      # Stage changed backend files and display in terminal
+npm run add fe      # Stage changed frontend files and display in terminal
+npm run push be     # Push backend to Git + upload to VPS + restart PM2
+npm run push fe     # Push frontend to Git + local build + upload to VPS + restart Nginx
+npm run report be   # Last backend deploy time and last 3 PM2 stdout/error logs
+npm run report fe   # Last frontend deploy time and last 3 Nginx access/error logs
+npm run report      # Full status report for both Frontend and Backend
+```
+
+#### Legacy Direct Scripts:
 ```bash
 # In BMS-opd-fe directory:
 npm run build

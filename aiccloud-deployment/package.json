@@ -1,0 +1,36 @@
+{
+  "name": "aiccloud-deployment",
+  "version": "1.0.0",
+  "description": "Dynamic deployment CLI for aiccloud VPS (FE & BE)",
+  "main": "cli.js",
+  "bin": {
+    "aic": "./cli.js"
+  },
+  "scripts": {
+    "setup": "node cli.js setup",
+    "add": "node cli.js add",
+    "add:be": "node cli.js add be",
+    "add:fe": "node cli.js add fe",
+    "push": "node cli.js push",
+    "push:be": "node cli.js push be",
+    "push:fe": "node cli.js push fe",
+    "report": "node cli.js report",
+    "report:be": "node cli.js report be",
+    "report:fe": "node cli.js report fe",
+    "deploy": "node cli.js push",
+    "status": "node cli.js report"
+  },
+  "keywords": [
+    "deployment",
+    "aiccloud",
+    "vps",
+    "pm2",
+    "nginx"
+  ],
+  "author": "Antigravity",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-ssh": "^13.1.0"
+  }
+}

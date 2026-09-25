@@ -197,3 +197,22 @@
   6. Committed & pushed frontend `src/components/Prescription.jsx` to `BMS-opd-fe` (`origin/Sohel2`).
   7. Committed & pushed root repo submodule pointers and deployment scripts to `AiBmsOpd` (`origin/main`).
 
+---
+
+### Task 14: Dynamic Deployment CLI (`aiccloud-deployment`) Creation & Verification
+* **Date & Time**: 2026-09-25 18:55 ~ 19:15 IST
+* **Goal**: Build dynamic deployment package in `aiccloud-deployment` supporting interactive local path configuration, file staging display (`npm run add be/fe`), automated build/git push/deployment (`npm run push be/fe`), and deployment status & 3-line log reporting (`npm run report be/fe`).
+* **Steps Taken**:
+  1. Created `aiccloud-deployment/package.json` with scripts (`setup`, `add`, `add:be`, `add:fe`, `push`, `push:be`, `push:fe`, `report`, `report:be`, `report:fe`).
+  2. Implemented `config.js` with interactive prompt fallback for `LOCAL_PROJECT_ROOT`, `LOCAL_BACKEND_PATH`, and `LOCAL_FRONTEND_PATH`.
+  3. Implemented `sshClient.js` with automated retry, authentication, and node-ssh fallback resolution.
+  4. Implemented `history.js` with JSON-backed deployment auditing (`deployment-state.json`).
+  5. Implemented `cli.js` supporting:
+     - `add be` / `add fe`: stages files and clearly displays file status in terminal with git summary.
+     - `push be`: commits/pushes to `origin/main`, uploads to VPS excluding `node_modules` and `.git`, installs dependencies, restarts PM2, and tails startup logs.
+     - `push fe`: commits/pushes to `origin/Sohel2`, runs `npm run build`, uploads `dist/` to VPS, and restarts Nginx.
+     - `report be` / `report fe` / `report`: connects to VPS and outputs last deployment timestamp along with the last 3 stdout and stderr/access log lines.
+  6. Verified CLI commands (`npm run report:be`, `npm run report:fe`, `add be`, `add fe`). All succeeded with clean outputs.
+  7. Updated `AGENTS.md` to document the dynamic deployment workflow.
+
+
