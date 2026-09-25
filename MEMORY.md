@@ -151,4 +151,25 @@
   6. **Receipt / Invoice Branding**: Updated OPD receipts in `Appointment.jsx` and `ReportsPage.jsx` using `generalSettingsUtil.js` to render the Default Header, Organization details, Platform Fee, Google Location QR code, and Default Footer.
   7. **Redeployment & Git Push**: Built frontend, deployed backend and frontend to aiccloud VPS (`https://biomechasoft.in`), verified live API response, and pushed all commits to GitHub.
 
+---
+
+### Task 11: Receipt Serial Numbers, Multi-Step Referral, Prescription Details & Report Data Mismatch Fix
+* **Date & Time**: 2026-09-25 13:00 ~ 13:30 IST
+* **Goal**:
+  1. Add Doctor-wise Day-wise serial numbers (`#01`, `#02` and `REC-YYYYMMDD-DOC-XX`) to OPD receipts with Header, Footer, and Location QR code.
+  2. Transform Create Referral into a 3-step wizard with step indicators and validation.
+  3. Ensure downloadable prescription uses selected default template and renders all clinical/demographic details.
+  4. Resolve data mismatch between Dashboard Appointments and Reports table (MINA KHATUN appearing for multiple patients).
+* **Root Causes & Solutions**:
+  1. **Data Mismatch in Reports**: When multiple family members booked appointments using the same phone (`9749626905`), they shared MINA KHATUN's User `patientId`. In `ReportsPage.jsx`, patient name checked `r.patientId` first, rendering "MINA KHATUN" for AZAHARUDDIN and ABDUL ALIM. Fixed by prioritizing `r.appointmentId?.name`.
+  2. **Payment Status Discrepancy**: ABDUL ALIM was marked "Completed" in appointments, which auto-synced the report status to "Paid". Because ABDUL ALIM was mistakenly displaying as "MINA KHATUN", it looked like Mina Khatun was "Paid" in Reports while "Pending" on Dashboard. Correcting the name completely aligned both views.
+  3. **Total Patients: 0**: `ReportsPage.jsx` called `/api/v1/user/patients` which was missing on backend. Implemented `getAllPatients` and route `/user/patients` in `userController.js` and `userRouter.js`.
+  4. **Multi-Step Referral**: Created `CreateReferralTab.css` and updated `CreateReferralTab.jsx` with a responsive 3-step wizard.
+  5. **Receipt Serial**: Updated `invoiceController.js` and `generalSettingsUtil.js` to compute daily doctor serials and embed QR code.
+  6. **Prescription Download**: Updated `prescriptionSchema.js`, `prescriptionController.js`, and `DownloadPrescriptionModal.jsx` to persist and load template and all clinical fields.
+* **Redeployment**:
+  - Rebuilt frontend with `npm run build`.
+  - Deployed BE and FE to aiccloud VPS (`https://biomechasoft.in`).
+  - Committed & pushed `BMS-opd-be` (`origin/main`) and `BMS-opd-fe` (`origin/Sohel2`).
+
 
