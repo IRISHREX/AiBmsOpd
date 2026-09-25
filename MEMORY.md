@@ -215,4 +215,18 @@
   6. Verified CLI commands (`npm run report:be`, `npm run report:fe`, `add be`, `add fe`). All succeeded with clean outputs.
   7. Updated `AGENTS.md` to document the dynamic deployment workflow.
 
+---
+
+### Task 15: Fix Prescription Save "admin is not defined" ReferenceError & Redeploy
+* **Date & Time**: 2026-09-25 19:20 ~ 19:55 IST
+* **Goal**: Fix `ReferenceError: admin is not defined` thrown in frontend console when saving a prescription, and ensure full deployment to VPS.
+* **Root Cause**: `Prescription.jsx` line 1304 referenced `admin?.prescriptionTemplate`, but `admin` was never declared or selected from context/Redux in `Prescription.jsx`, causing `handleSave` to throw a client-side `ReferenceError` before sending the request.
+* **Steps Taken**:
+  1. Updated `Prescription.jsx`: imported `admin` from Redux auth slice (`const admin = useSelector((state) => state.auth?.admin);`).
+  2. Rebuilt production bundle (`npm run build`).
+  3. Re-uploaded frontend dist to `/root/BMS-opd-fe` on aiccloud VPS and restarted Nginx.
+  4. Verified live frontend (`HTTP 200 OK`) and live backend API (`POST / GET` responding).
+  5. Committed & pushed frontend changes (`e25f6fb`) to `BMS-opd-fe` (`origin/Sohel2`).
+
+
 
