@@ -35,8 +35,8 @@ async function deployBackend() {
     recursive: true,
     concurrency: 8,
     validate: (itemPath) => {
-      const b = path.basename(itemPath);
-      return b !== 'node_modules' && b !== '.git';
+      const norm = itemPath.replace(/\\/g, '/');
+      return !norm.includes('/node_modules') && !norm.includes('/.git');
     },
   });
   console.log('✅ Backend files uploaded!');

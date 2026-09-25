@@ -172,4 +172,28 @@
   - Deployed BE and FE to aiccloud VPS (`https://biomechasoft.in`).
   - Committed & pushed `BMS-opd-be` (`origin/main`) and `BMS-opd-fe` (`origin/Sohel2`).
 
+---
+
+### Task 12: Prescription Save and Recipient Notification Reliability
+* **Date & Time**: 2026-09-25 18:16 IST
+* **Goal**: Fix the misleading prescription-save error and ensure prescription notifications are delivered to the assigned doctor.
+* **Steps Taken**:
+  1. Inspected the live backend logs and identified message-validation failures caused by notifications using missing appointment `firstName` values.
+  2. Updated `Prescription.jsx` to use the saved prescription's resolved doctor as the message `recipient`, with valid system sender details and the current site URL in the preview link.
+  3. Separated a failed save from an after-save UI issue, preserving the server's error message instead of reporting a false combined save/notification failure.
+  4. Updated appointment status notifications to use a valid system sender and the appointment patient as recipient.
+
+---
+
+### Task 13: aiccloud VPS Redeployment & Git Synchronization
+* **Date & Time**: 2026-09-25 18:30 ~ 18:50 IST
+* **Goal**: Rebuild and redeploy frontend and backend to aiccloud VPS (`https://biomechasoft.in`), fix directory upload filter in backend deployment, commit and push changes across all repositories.
+* **Steps Taken**:
+  1. Rebuilt frontend bundle (`npm run build`) in `BMS-opd-fe` with `VITE_BASE_URL=https://biomechasoft.in`.
+  2. Deployed frontend dist to VPS (`/root/BMS-opd-fe`) via `deploy-frontend-now.js` and restarted Nginx. Verified `HTTP 200 OK`.
+  3. Optimized backend deployment filter in `deploy-backend-now.js` (normalized paths to skip `node_modules` and `.git` subtrees).
+  4. Deployed backend to `/root/BMS-opd-be` on VPS, uploaded `.env`, ran `npm install --production`, and restarted PM2 (`bms-backend`). Verified local MongoDB connection and online status.
+  5. Committed & pushed backend `controller/appointmentController.js` to `BMS-opd-be` (`origin/main`).
+  6. Committed & pushed frontend `src/components/Prescription.jsx` to `BMS-opd-fe` (`origin/Sohel2`).
+  7. Committed & pushed root repo submodule pointers and deployment scripts to `AiBmsOpd` (`origin/main`).
 
